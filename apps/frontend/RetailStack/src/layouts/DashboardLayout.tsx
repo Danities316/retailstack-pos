@@ -81,10 +81,17 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <div className="animate-in fade-in duration-200 h-full w-full">
                 {children}
                 <Outlet />
+<<<<<<< HEAD
           </div>
           </div>
       </main>
     </div>
+=======
+              </div>
+            </div>
+          </main>
+        </div>
+>>>>>>> f3fdb7e (Initial commit)
       </div>
     </ThemeProvider>
   )

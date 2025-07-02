@@ -42,7 +42,11 @@ export const ProductsPage = () => {
         setProducts(productsData)
         
         // Load categories
+<<<<<<< HEAD
         const categoriesResponse = await fetch('https://retailstack-pos.onrender.com/api/categories', {
+=======
+        const categoriesResponse = await fetch('http://localhost:3000/api/categories', {
+>>>>>>> f3fdb7e (Initial commit)
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (categoriesResponse.ok) {

@@ -27,8 +27,12 @@ router.post('/', async (req: AuthRequest, res: any) => {
   console.log("See items: ", items)
 
   if (!paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
+<<<<<<< HEAD
     res.status(400).json({ error: 'Payment method and a non-empty array of items are required.' });
     return;
+=======
+    return res.status(400).json({ error: 'Payment method and a non-empty array of items are required.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -114,7 +118,11 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
   } catch (error) {
     console.error('Sale creation failed:', error);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to create sale.', details: error instanceof Error ? error.message : String(error) });
+=======
+    res.status(500).json({ error: 'Failed to create sale.', details: error.message });
+>>>>>>> f3fdb7e (Initial commit)
   }
 });
 
@@ -150,8 +158,12 @@ router.get('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
   });
 
   if (!sale) {
+<<<<<<< HEAD
     res.status(404).json({ error: 'Sale not found.' });
     return;
+=======
+    return res.status(404).json({ error: 'Sale not found.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
   res.json(sale);
 });

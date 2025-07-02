@@ -43,7 +43,11 @@ class SyncService {
       const token = localStorage.getItem('auth_token')
       if (!token) return
 
+<<<<<<< HEAD
       const response = await fetch(`https://retailstack-pos.onrender.com/api/${item.entity}`, {
+=======
+      const response = await fetch(`http://localhost:3000/api/${item.entity}`, {
+>>>>>>> f3fdb7e (Initial commit)
         method: item.action === 'DELETE' ? 'DELETE' : 
                 item.action === 'CREATE' ? 'POST' : 'PUT',
         headers: {
@@ -74,7 +78,11 @@ class SyncService {
 
     try {
       // Sync products
+<<<<<<< HEAD
       const productsResponse = await fetch('https://retailstack-pos.onrender.com/api/products', {
+=======
+      const productsResponse = await fetch('http://localhost:3000/api/products', {
+>>>>>>> f3fdb7e (Initial commit)
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (productsResponse.ok) {
@@ -85,7 +93,11 @@ class SyncService {
       }
 
       // Sync sales
+<<<<<<< HEAD
       const salesResponse = await fetch('https://retailstack-pos.onrender.com/api/sales', {
+=======
+      const salesResponse = await fetch('http://localhost:3000/api/sales', {
+>>>>>>> f3fdb7e (Initial commit)
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (salesResponse.ok) {

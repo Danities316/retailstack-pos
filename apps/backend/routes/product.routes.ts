@@ -28,8 +28,12 @@ router.get('/:id', async (req: AuthRequest, res) => {
   });
 
   if (!product) {
+<<<<<<< HEAD
     res.status(404).json({ error: 'Product not found.' });
     return;
+=======
+    return res.status(404).json({ error: 'Product not found.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
   res.json(product);
 });
@@ -53,8 +57,12 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
   const tenantId = req.user!.tenantId;
   
   if (!productName || sellingPrice === undefined || costPrice === undefined) {
+<<<<<<< HEAD
     res.status(400).json({ error: 'Product Name, Selling Price, and Cost Price are required.' });
     return;
+=======
+    return res.status(400).json({ error: 'Product Name, Selling Price, and Cost Price are required.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -76,10 +84,16 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
   } catch (error: any) {
     // P2003 is the foreign key constraint error code
     if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
+<<<<<<< HEAD
        res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
        return;
     }
     res.status(500).json({ error: 'Failed to create product.', message: error instanceof Error ? error.message : String(error) });
+=======
+       return res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+    }
+    res.status(500).json({ error: 'Failed to create product.', message: error.message });
+>>>>>>> f3fdb7e (Initial commit)
   }
 });
 
@@ -117,8 +131,12 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
     res.json(product);
   } catch (error: any) {
      if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
+<<<<<<< HEAD
        res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
        return;
+=======
+       return res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+>>>>>>> f3fdb7e (Initial commit)
     }
     res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
   }
@@ -146,8 +164,12 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
   const tenantId = req.user!.tenantId;
 
   if (typeof change !== 'number' || !reason) {
+<<<<<<< HEAD
     res.status(400).json({ error: 'A numeric "change" value and a "reason" string are required.' });
     return;
+=======
+    return res.status(400).json({ error: 'A numeric "change" value and a "reason" string are required.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -177,7 +199,11 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
           tenantId: tenantId!,
           change,
           newStockLevel,
+<<<<<<< HEAD
           reason, // e.g., "STOCK_IN", "STOCK_OUT", "DAMAGE", "INVENTORY_COUNT"
+=======
+          reason, // e.g., "STOCK_IN", "DAMAGE", "INVENTORY_COUNT"
+>>>>>>> f3fdb7e (Initial commit)
           notes,
         },
       });
@@ -189,6 +215,7 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
 
   } catch (error: any) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+<<<<<<< HEAD
        res.status(404).json({ error: 'Product not found.' });
        return;
     }
@@ -196,6 +223,13 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
     if (error.message.includes('Product not found')) {
        res.status(404).json({ error: error.message });
        return;
+=======
+       return res.status(404).json({ error: 'Product not found.' });
+    }
+    // Handle the custom error from inside the transaction
+    if (error.message.includes('Product not found')) {
+       return res.status(404).json({ error: error.message });
+>>>>>>> f3fdb7e (Initial commit)
     }
     res.status(500).json({ error: 'Failed to update stock.' });
   }

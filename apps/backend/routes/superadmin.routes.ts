@@ -25,10 +25,16 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
   } = req.body;
 
   if (!tenantName || !phoneNumber || !ownerEmail || !ownerPassword) {
+<<<<<<< HEAD
     res.status(400).json({ 
       error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.' 
     });
     return;
+=======
+    return res.status(400).json({ 
+      error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.' 
+    });
+>>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -66,11 +72,18 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
 
   } catch (error: any) {
     if (error.code === 'P2002') {
+<<<<<<< HEAD
       res.status(409).json({ error: 'A user with this email already exists.' });
       return;
     }
     console.error(error);
     res.status(500).json({ error: 'Failed to create tenant.', message: error instanceof Error ? error.message : String(error) });
+=======
+      return res.status(409).json({ error: 'A user with this email already exists.' });
+    }
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create tenant.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 });
 
@@ -83,8 +96,12 @@ router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
   });
 
   if (!tenant) {
+<<<<<<< HEAD
     res.status(404).json({ error: 'Tenant not found' });
     return;
+=======
+    return res.status(404).json({ error: 'Tenant not found' });
+>>>>>>> f3fdb7e (Initial commit)
   }
   res.json(tenant);
 });
@@ -129,8 +146,12 @@ router.delete('/tenants/:id', async (req: AuthRequest, res) => {
   const { id } = req.params
   const tenant = await prisma.tenant.findUnique({ where: { id } })
   if (!tenant) {
+<<<<<<< HEAD
     res.status(404).json({ error: 'Tenant not found' })
     return;
+=======
+    return res.status(404).json({ error: 'Tenant not found' })
+>>>>>>> f3fdb7e (Initial commit)
   }
   await prisma.tenant.delete({ where: { id } })
   res.status(204).send()

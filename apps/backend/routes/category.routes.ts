@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// apps/backend/src/routes/category.routes.ts
+>>>>>>> f3fdb7e (Initial commit)
 import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
@@ -15,8 +19,12 @@ router.post('/', async (req: AuthRequest, res) => {
   const tenantId = req.user!.tenantId;
 
   if (!categoryName) {
+<<<<<<< HEAD
     res.status(400).json({ error: 'Category name is required.' });
     return;
+=======
+    return res.status(400).json({ error: 'Category name is required.' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -26,7 +34,11 @@ router.post('/', async (req: AuthRequest, res) => {
     res.status(201).json(newCategory);
   } catch (error: any) {
     console.log('Failed to create category.', error.message)
+<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to create category.', message: error instanceof Error ? error.message : String(error) });
+=======
+    res.status(500).json({ error: 'Failed to create category.', meesage: error.meesage });
+>>>>>>> f3fdb7e (Initial commit)
   }
 });
 
@@ -61,8 +73,12 @@ router.get('/:id', async (req: AuthRequest, res) => {
       where: { id, tenantId },
     });
     if (!category) {
+<<<<<<< HEAD
       res.status(404).json({ error: 'Category not found.' });
       return;
+=======
+      return res.status(404).json({ error: 'Category not found.' });
+>>>>>>> f3fdb7e (Initial commit)
     }
     res.json(category);
   } catch (error) {
@@ -98,8 +114,12 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         const hasChildren = await prisma.category.count({ where: { parentId: id, tenantId } });
 
         if (hasProducts > 0 || hasChildren > 0) {
+<<<<<<< HEAD
             res.status(400).json({ error: 'Cannot delete category. Reassign its products and sub-categories first.' });
             return;
+=======
+            return res.status(400).json({ error: 'Cannot delete category. Reassign its products and sub-categories first.' });
+>>>>>>> f3fdb7e (Initial commit)
         }
 
         await prisma.category.delete({ where: { id, tenantId } });

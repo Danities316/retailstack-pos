@@ -21,5 +21,8 @@
     "apps/*",
     "packages/*"
   ]
+<<<<<<< HEAD
 
+=======
+>>>>>>> f3fdb7e (Initial commit)
 }

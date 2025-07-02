@@ -19,7 +19,11 @@ export const LoginPage = () => {
     setLoading(true)
     setError(null)
     try {
+<<<<<<< HEAD
       const res = await fetch(`https://retailstack-pos.onrender.com/api/auth/login`, {
+=======
+      const res = await fetch(`http://localhost:3000/api/auth/login`, {
+>>>>>>> f3fdb7e (Initial commit)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
