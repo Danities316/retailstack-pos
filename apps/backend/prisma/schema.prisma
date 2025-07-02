@@ -1,0 +1,141 @@
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// apps/backend/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  phoneNumber  String
+  logoUrl     String?  // For white-labeling 
+  colorScheme String?  // For white-labeling 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  loyverseApiKey String?
+
+  users    User[]
+  products Product[]
+  sales    Sale[]
+  categories Category[]
+  inventoryLogs InventoryLog[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  phoneNumber  String
+  name      String?
+  role      UserRole @default(CASHIER) // Roles include Owner, Manager, Cashier 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  setupToken         String?   @unique
+  setupTokenExpires  DateTime?
+  @@index([tenantId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  productName        String @default("products")
+  productImage        String @default("strimgs")
+  productColor        String @default("yellow")
+  productDescription        String  @default("helooo")
+  costPrice       Decimal @default(0.0)
+  sellingPrice       Decimal @default(0.0)
+  quantity       Int      @default(0)
+  stock       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  saleItems SaleItem[]
+  inventoryLogs InventoryLog[]
+
+  categoryId String? // Optional, a product might not have a category
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete:SetNull) // If category is deleted, set this field to null
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+model Sale {
+  id          String     @id @default(cuid())
+  totalAmount Decimal
+  paymentMethod String
+  createdAt   DateTime   @default(now())
+
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items       SaleItem[]
+  inventoryLogs InventoryLog[]
+  @@index([tenantId])
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  price     Decimal
+
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  @@index([saleId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  categoryName      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentId String? // Optional: A category can be a top-level one
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete:NoAction)
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model InventoryLog {
+  id              String   @id @default(cuid())
+  change          Int      // The amount the stock changed by (e.g., -2 or +50)
+  newStockLevel   Int      // The stock level of the product *after* the change
+  reason          String   // e.g., "SALE", "STOCK_IN", "RETURN", "DAMAGE"
+  notes           String?  // Optional notes for manual adjustments
+  createdAt       DateTime @default(now())
+
+  // Relations
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete:Cascade)
+  
+  // Optional link to the sale that triggered this log
+  saleId          String?
+  sale            Sale?    @relation(fields: [saleId], references: [id], onDelete:SetNull)
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([saleId])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  CASHIER
+}

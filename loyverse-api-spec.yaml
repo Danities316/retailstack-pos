@@ -1,0 +1,792 @@
+openapi: 3.0.0
+info:
+  title: Loyverse API
+  version: 1.0.0
+  description: API documentation for Loyverse services.
+servers:
+  - url: https://api.loyverse.com/v1.0
+paths:
+  /categories:
+    get:
+      summary: Get a list of categories
+      parameters:
+        - name: categories_ids
+          in: query
+          description: Return only categories specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Number of categories to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+        - name: show_deleted
+          in: query
+          description: Show deleted resources
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A list of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                          maxLength: 64
+                        color:
+                          type: string
+                          enum: [GREY, RED, PINK, ORANGE, GREEN, BLUE, PURPLE]
+                        created_at:
+                          type: string
+                          format: date-time
+                        deleted_at:
+                          type: string
+                          format: date-time
+
+    post:
+      summary: Create or update a single category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 64
+                color:
+                  type: string
+                  enum: [GREY, RED, PINK, ORANGE, GREEN, BLUE, PURPLE]
+      responses:
+        '200':
+          description: The created or updated category
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    maxLength: 64
+                  color:
+                    type: string
+                    enum: [GREY, RED, PINK, ORANGE, GREEN, BLUE, PURPLE]
+                  created_at:
+                    type: string
+                    format: date-time
+                  deleted_at:
+                    type: string
+                    format: date-time
+
+  /customers:
+    get:
+      summary: Get a list of customers
+      parameters:
+        - name: customer_ids
+          in: query
+          description: Return only customers specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Number of customers to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+        - name: show_deleted
+          in: query
+          description: Show deleted resources
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A list of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                          maxLength: 64
+                        email:
+                          type: string
+                          maxLength: 100
+                        phone_number:
+                          type: string
+                          maxLength: 15
+                        address:
+                          type: string
+                          maxLength: 192
+                        created_at:
+                          type: string
+                          format: date-time
+
+    post:
+      summary: Create or update a single customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  maxLength: 64
+                email:
+                  type: string
+                  maxLength: 100
+                phone_number:
+                  type: string
+                  maxLength: 15
+                address:
+                  type: string
+                  maxLength: 192
+      responses:
+        '200':
+          description: The created or updated customer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    maxLength: 64
+                  email:
+                    type: string
+                    maxLength: 100
+                  phone_number:
+                    type: string
+                    maxLength: 15
+                  address:
+                    type: string
+                    maxLength: 192
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /receipts:
+    get:
+      summary: Get a list of receipts
+      parameters:
+        - name: receipt_numbers
+          in: query
+          description: Return only receipts specified by a comma-separated list of receipt numbers
+          required: false
+          schema:
+            type: string
+        - name: created_at_min
+          in: query
+          description: Show resources created after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of receipts to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of receipts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receipts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        receipt_number:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        total_money:
+                          type: number
+                        customer_id:
+                          type: string
+
+    post:
+      summary: Create a sales receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                store_id:
+                  type: string
+                employee_id:
+                  type: string
+                order:
+                  type: string
+                customer_id:
+                  type: string
+                source:
+                  type: string
+                receipt_date:
+                  type: string
+                  format: date-time
+                total_discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      percentage:
+                        type: number
+                line_items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      variant_id:
+                        type: string
+                      quantity:
+                        type: integer
+                payments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      payment_type_id:
+                        type: string
+                      paid_at:
+                        type: string
+                        format: date-time
+      responses:
+        '200':
+          description: The created receipt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receipt_number:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  total_money:
+                    type: number
+  paths:
+  /inventory:
+    get:
+      summary: Get inventory levels for item variants
+      parameters:
+        - name: store_ids
+          in: query
+          description: Show inventory levels only for specified stores
+          required: false
+          schema:
+            type: string
+        - name: variant_ids
+          in: query
+          description: Show inventory levels only for specified variants
+          required: false
+          schema:
+            type: string
+        - name: updated_at_min
+          in: query
+          description: Show inventory levels updated at or after specified date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of inventory levels to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of inventory levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inventory_levels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        variant_id:
+                          type: string
+                        store_id:
+                          type: string
+                        in_stock:
+                          type: integer
+                        updated_at:
+                          type: string
+                          format: date-time
+
+    post:
+      summary: Batch update inventory levels for item variants
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inventory_levels:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      variant_id:
+                        type: string
+                      store_id:
+                        type: string
+                      stock_after:
+                        type: integer
+      responses:
+        '200':
+          description: The updated inventory levels
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inventory_levels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        variant_id:
+                          type: string
+                        store_id:
+                          type: string
+                        in_stock:
+                          type: integer
+                        updated_at:
+                          type: string
+                          format: date-time
+
+  /items:
+    get:
+      summary: Get a list of items
+      parameters:
+        - name: items_ids
+          in: query
+          description: Return only items specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: created_at_min
+          in: query
+          description: Show resources created after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of items to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        item_name:
+                          type: string
+                          maxLength: 64
+                        description:
+                          type: string
+                          maxLength: 32768
+                        track_stock:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+
+    post:
+      summary: Create or update a single item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                item_name:
+                  type: string
+                  maxLength: 64
+                description:
+                  type: string
+                  maxLength: 32768
+                category_id:
+                  type: string
+                  format: uuid
+                track_stock:
+                  type: boolean
+                sold_by_weight:
+                  type: boolean
+                is_composite:
+                  type: boolean
+                components:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      variant_id:
+                        type: string
+                      quantity:
+                        type: integer
+      responses:
+        '200':
+          description: The created or updated item
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  item_name:
+                    type: string
+                    maxLength: 64
+                  description:
+                    type: string
+                    maxLength: 32768
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /merchant:
+    get:
+      summary: Get merchant information
+      responses:
+        '200':
+          description: Merchant information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  business_name:
+                    type: string
+                  email:
+                    type: string
+                  country:
+                    type: string
+                  currency:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      decimal_places:
+                        type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /payment_types:
+    get:
+      summary: Get a list of payment types
+      parameters:
+        - name: payment_type_ids
+          in: query
+          description: Return only payment types specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: created_at_min
+          in: query
+          description: Show resources created after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of payment types to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of payment types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payment_types:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          enum: [CASH, NONINTEGRATEDCARD, CHECK, WORLDPAY, COINEY, IZETTLE, SUMUP, TYRO, CHECURITY, SMARTPAY, YOCO, NICEPAY, PAYGATE, EZETAP, FIRSTDATA, SOFTBANK, ONEPAY, KICC, MERCADOPAGO, OTHER]
+                        created_at:
+                          type: string
+                          format: date-time
+
+  /pos_devices:
+    get:
+      summary: Get a list of POS devices
+      parameters:
+        - name: store_id
+          in: query
+          description: Show POS devices only for specified store
+          required: false
+          schema:
+            type: string
+        - name: show_deleted
+          in: query
+          description: Show deleted resources
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: A list of POS devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pos_devices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        store_id:
+                          type: string
+                        activated:
+                          type: boolean
+                        deleted_at:
+                          type: string
+                          format: date-time
+
+    post:
+      summary: Create or update a single POS device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                store_id:
+                  type: string
+                  required: true
+      responses:
+        '200':
+          description: The created or updated POS device
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  store_id:
+                    type: string
+                  activated:
+                    type: boolean
+                  deleted_at:
+                    type: string
+                    format: date-time
+
+  /suppliers:
+    get:
+      summary: Get a list of suppliers
+      parameters:
+        - name: supplier_ids
+          in: query
+          description: Return only suppliers specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: created_at_min
+          in: query
+          description: Show resources created after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of suppliers to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of suppliers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suppliers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        phone_number:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+
+  /taxes:
+    get:
+      summary: Get a list of taxes
+      parameters:
+        - name: tax_ids
+          in: query
+          description: Return only taxes specified by a comma-separated list of IDs
+          required: false
+          schema:
+            type: string
+        - name: created_at_min
+          in: query
+          description: Show resources created after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: Number of taxes to return (default: 50)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 250
+      responses:
+        '200':
+          description: A list of taxes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taxes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        rate:
+                          type: number
+                        created_at:
+                          type: string
+                          format: date-time
+
