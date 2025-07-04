@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { protect } from '../middleware/auth.middleware';
+import { protect, AuthRequest } from '../middleware/auth.middleware';
 
 // Route Imports
 import superAdminRoutes from '../routes/superadmin.routes';
@@ -23,19 +23,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // --- Public Routes ---
-app.get('/api/health', (req: Request, res: Response) => res.json({ status: 'ok' }));
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok' });
+});
 app.use('/api/auth', authRoutes);
 
 // --- Protected Routes ---
 // All routes defined after this line require a valid JWT.
-app.use('/api/superadmin', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), superAdminRoutes);
-app.use('/api/products', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), productRoutes);
-app.use('/api/sales', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), saleRoutes);
+app.use('/api/superadmin', protect, superAdminRoutes);
+app.use('/api/products', protect, productRoutes);
+app.use('/api/sales', protect, saleRoutes);
 // app.use('/api/tenants', tenantRoutes); // Protected by SUPER_ADMIN role
-app.use('/api/users', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), userRoutes);
-app.use('/api/categories', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), categoryRoutes);
-app.use('/api/inventory', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), inventoryRoutes);
-app.use('/api/dashboard', (req: Request, res: Response, next: NextFunction) => protect(req, res, next), dashboardRoutes);
+app.use('/api/users', protect, userRoutes);
+app.use('/api/categories', protect, categoryRoutes);
+app.use('/api/inventory', protect, inventoryRoutes);
+app.use('/api/dashboard', protect, dashboardRoutes);
 // ... Add other protected routes (e.g., sales, dashboard) here
 
 const PORT = process.env.PORT || 3000;

@@ -25,9 +25,10 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
   } = req.body;
 
   if (!tenantName || !phoneNumber || !ownerEmail || !ownerPassword) {
-    return res.status(400).json({ 
+    res.status(400).json({ 
       error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.' 
     });
+    return;
   }
 
   try {
@@ -65,10 +66,11 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
 
   } catch (error: any) {
     if (error.code === 'P2002') {
-      return res.status(409).json({ error: 'A user with this email already exists.' });
+      res.status(409).json({ error: 'A user with this email already exists.' });
+      return;
     }
     console.error(error);
-    res.status(500).json({ error: 'Failed to create tenant.' });
+    res.status(500).json({ error: 'Failed to create tenant.', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -81,7 +83,8 @@ router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
   });
 
   if (!tenant) {
-    return res.status(404).json({ error: 'Tenant not found' });
+    res.status(404).json({ error: 'Tenant not found' });
+    return;
   }
   res.json(tenant);
 });
@@ -126,7 +129,8 @@ router.delete('/tenants/:id', async (req: AuthRequest, res) => {
   const { id } = req.params
   const tenant = await prisma.tenant.findUnique({ where: { id } })
   if (!tenant) {
-    return res.status(404).json({ error: 'Tenant not found' })
+    res.status(404).json({ error: 'Tenant not found' })
+    return;
   }
   await prisma.tenant.delete({ where: { id } })
   res.status(204).send()

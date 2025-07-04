@@ -17,12 +17,14 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   console.log("See details: ", req.body)
 
   if (!email || !role || !phoneNumber) {
-    return res.status(400).json({ error: 'Email, role, and phone number are required.' });
+    res.status(400).json({ error: 'Email, role, and phone number are required.' });
+    return;
   }
 
   // Owners should not be able to create other Owners via this endpoint
   if (role === UserRole.OWNER) {
-    return res.status(403).json({ error: 'You cannot invite users with this role.' });
+    res.status(403).json({ error: 'You cannot invite users with this role.' });
+    return;
   }
 
   try {
@@ -36,7 +38,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       if (existingUser.email === email) {
         // If roles are the same, return error
         if (existingUser.role === role) {
-          return res.status(409).json({ 
+          res.status(409).json({ 
             error: 'User already exists with this role.',
             existingUser: {
               id: existingUser.id,
@@ -44,13 +46,14 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
               role: existingUser.role
             }
           });
+          return;
         }
 
         // If roles are different, check if it's a role change request
         
         
         if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER') {
-          return res.status(409).json({
+          res.status(409).json({
             error: 'User already exists with higher role. Would you like to downgrade the role?',
             existingUser: {
               id: existingUser.id,
@@ -60,9 +63,10 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             },
             requiresConfirmation: true
           });
+          return;
         } 
       } else {
-        return res.status(409).json({ 
+        res.status(409).json({ 
           error: 'User already exists in another tenant.',
           existingUser: {
             id: existingUser.id,
@@ -70,6 +74,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             role: existingUser.role
           }
         });
+        return;
       }
     }
 
@@ -92,10 +97,11 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     });
 
     if(!user){
-      return res.status(500).json({
+      res.status(500).json({
         error: 'There us an error creating User'
-    })
-  }
+      });
+      return;
+    }
     
     const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
@@ -103,7 +109,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     res.status(201).json({ message: 'Invitation sent successfully.', user: user });
   } catch (error: any) {
     console.log("Failed to invite user.: ", error)
-    res.status(500).json({ error: 'Failed to invite user.', message: error.message });
+    res.status(500).json({ error: 'Failed to invite user.', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -112,9 +118,10 @@ router.post('/setup-account', async (req: any, res: any) => {
   const { token, password } = req.body;
 
   if (!token || !password) {
-    return res.status(400).json({ 
+    res.status(400).json({ 
       error: 'Token and password are required.' 
     });
+    return;
   }
 
   try {
@@ -132,9 +139,10 @@ router.post('/setup-account', async (req: any, res: any) => {
     });
 
     if (!user) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Invalid or expired setup token.' 
       });
+      return;
     }
 
     // Hash the new password
@@ -166,7 +174,7 @@ router.post('/setup-account', async (req: any, res: any) => {
     console.error('Setup account error:', error);
     res.status(500).json({ 
       error: 'Failed to setup account.',
-      message: error.message 
+      message: error instanceof Error ? error.message : String(error) 
     });
   }
 });
@@ -194,9 +202,10 @@ router.get('/setup-account/:token', async (req: any, res: any) => {
     });
 
     if (!user) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         error: 'Invalid or expired setup token.' 
       });
+      return;
     }
 
     res.json({ 
@@ -208,7 +217,7 @@ router.get('/setup-account/:token', async (req: any, res: any) => {
     console.error('Verify token error:', error);
     res.status(500).json({ 
       error: 'Failed to verify token.',
-      message: error.message 
+      message: error instanceof Error ? error.message : String(error) 
     });
   }
 });
@@ -280,7 +289,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
   });
 
   if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+    res.status(404).json({ error: 'User not found' });
+    return;
   }
   res.json(user);
 });
@@ -292,12 +302,14 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   const currentUserId = req.user!.userId;
 
   if (id === currentUserId) {
-    return res.status(400).json({ error: 'You cannot delete yourself.' });
+    res.status(400).json({ error: 'You cannot delete yourself.' });
+    return;
   }
 
   const user = await prisma.user.findFirst({ where: { id, tenantId } });
   if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+    res.status(404).json({ error: 'User not found' });
+    return;
   }
 
   await prisma.user.delete({ where: { id } });

@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const router = Router();
 
 // Helper to get tenantId from user session or query/header
-function getTenantId(req: Request): string | undefined {
+function getTenantId(req: any): string | undefined {
   // Adjust this logic based on your auth/session implementation
   // Example: tenantId from req.user (populated by auth middleware)
   if (req.user && req.user.tenantId) return req.user.tenantId;
@@ -15,13 +15,14 @@ function getTenantId(req: Request): string | undefined {
   return undefined;
 }
 
-router.get('/quick-stats', async (req: Request, res: Response) => {
+router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
   try {
     
     const tenantId = getTenantId(req);
     
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenantId' });
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
     }
 
     // Today
@@ -73,15 +74,16 @@ router.get('/quick-stats', async (req: Request, res: Response) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch quick stats' });
+    res.status(500).json({ error: 'Failed to fetch quick stats', message: err instanceof Error ? err.message : String(err) });
   }
 });
 
-router.get('/sales-chart', async (req: Request, res: Response) => {
+router.get('/sales-chart', async (req: any, res: any): Promise<void> => {
   try {
     const tenantId = getTenantId(req);
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenantId' });
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
     }
     const range = (req.query.range as string) || 'today';
     const now = new Date();
@@ -103,7 +105,8 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-      return res.json({ data });
+      res.json({ data });
+      return;
     } else if (range === 'week') {
       const start = startOfWeek(now, { weekStartsOn: 1 }); // Monday
       const end = endOfWeek(now, { weekStartsOn: 1 });
@@ -121,7 +124,8 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-      return res.json({ data });
+      res.json({ data });
+      return;
     } else if (range === 'month') {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
@@ -143,22 +147,25 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-      return res.json({ data });
+      res.json({ data });
+      return;
     } else {
-      return res.status(400).json({ error: 'Invalid range' });
+      res.status(400).json({ error: 'Invalid range' });
+      return;
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch sales chart data' });
+    res.status(500).json({ error: 'Failed to fetch sales chart data', message: err instanceof Error ? err.message : String(err) });
   }
 });
 
-router.get('/recent-sales', async (req: Request, res: Response) => {
+router.get('/recent-sales', async (req: any, res: any): Promise<void> => {
   try {
    
     const tenantId = getTenantId(req);
     if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenantId' });
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
     }
     const limit = parseInt(req.query.limit as string) || 5;
     const sales = await prisma.sale.findMany({
@@ -171,7 +178,7 @@ router.get('/recent-sales', async (req: Request, res: Response) => {
     const data = sales.map(sale => ({
       id: sale.id,
       customer: 'N/A',
-      items: Array.isArray(sale.items) ? sale.items.length : 0,
+      items: 0, // Since items is not in the Sale model, default to 0
       total: Number(sale.totalAmount),
       time: sale.createdAt,
       status: 'Completed',
@@ -180,7 +187,7 @@ router.get('/recent-sales', async (req: Request, res: Response) => {
     res.json({ data });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to fetch recent sales' });
+    res.status(500).json({ error: 'Failed to fetch recent sales', message: err instanceof Error ? err.message : String(err) });
   }
 });
 

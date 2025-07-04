@@ -28,7 +28,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
   });
 
   if (!product) {
-    return res.status(404).json({ error: 'Product not found.' });
+    res.status(404).json({ error: 'Product not found.' });
+    return;
   }
   res.json(product);
 });
@@ -52,7 +53,8 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
   const tenantId = req.user!.tenantId;
   
   if (!productName || sellingPrice === undefined || costPrice === undefined) {
-    return res.status(400).json({ error: 'Product Name, Selling Price, and Cost Price are required.' });
+    res.status(400).json({ error: 'Product Name, Selling Price, and Cost Price are required.' });
+    return;
   }
 
   try {
@@ -74,9 +76,10 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
   } catch (error: any) {
     // P2003 is the foreign key constraint error code
     if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
-       return res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+       res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+       return;
     }
-    res.status(500).json({ error: 'Failed to create product.', message: error.message });
+    res.status(500).json({ error: 'Failed to create product.', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -114,7 +117,8 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
     res.json(product);
   } catch (error: any) {
      if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
-       return res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+       res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
+       return;
     }
     res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
   }
@@ -142,7 +146,8 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
   const tenantId = req.user!.tenantId;
 
   if (typeof change !== 'number' || !reason) {
-    return res.status(400).json({ error: 'A numeric "change" value and a "reason" string are required.' });
+    res.status(400).json({ error: 'A numeric "change" value and a "reason" string are required.' });
+    return;
   }
 
   try {
@@ -172,7 +177,7 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
           tenantId: tenantId!,
           change,
           newStockLevel,
-          reason, // e.g., "STOCK_IN", "DAMAGE", "INVENTORY_COUNT"
+          reason, // e.g., "STOCK_IN", "STOCK_OUT", "DAMAGE", "INVENTORY_COUNT"
           notes,
         },
       });
@@ -184,11 +189,13 @@ router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole
 
   } catch (error: any) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-       return res.status(404).json({ error: 'Product not found.' });
+       res.status(404).json({ error: 'Product not found.' });
+       return;
     }
     // Handle the custom error from inside the transaction
     if (error.message.includes('Product not found')) {
-       return res.status(404).json({ error: error.message });
+       res.status(404).json({ error: error.message });
+       return;
     }
     res.status(500).json({ error: 'Failed to update stock.' });
   }

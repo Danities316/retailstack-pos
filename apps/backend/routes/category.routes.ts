@@ -1,4 +1,3 @@
-// apps/backend/src/routes/category.routes.ts
 import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
@@ -16,7 +15,8 @@ router.post('/', async (req: AuthRequest, res) => {
   const tenantId = req.user!.tenantId;
 
   if (!categoryName) {
-    return res.status(400).json({ error: 'Category name is required.' });
+    res.status(400).json({ error: 'Category name is required.' });
+    return;
   }
 
   try {
@@ -26,7 +26,7 @@ router.post('/', async (req: AuthRequest, res) => {
     res.status(201).json(newCategory);
   } catch (error: any) {
     console.log('Failed to create category.', error.message)
-    res.status(500).json({ error: 'Failed to create category.', meesage: error.meesage });
+    res.status(500).json({ error: 'Failed to create category.', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -61,7 +61,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
       where: { id, tenantId },
     });
     if (!category) {
-      return res.status(404).json({ error: 'Category not found.' });
+      res.status(404).json({ error: 'Category not found.' });
+      return;
     }
     res.json(category);
   } catch (error) {
@@ -97,7 +98,8 @@ router.delete('/:id', async (req: AuthRequest, res) => {
         const hasChildren = await prisma.category.count({ where: { parentId: id, tenantId } });
 
         if (hasProducts > 0 || hasChildren > 0) {
-            return res.status(400).json({ error: 'Cannot delete category. Reassign its products and sub-categories first.' });
+            res.status(400).json({ error: 'Cannot delete category. Reassign its products and sub-categories first.' });
+            return;
         }
 
         await prisma.category.delete({ where: { id, tenantId } });

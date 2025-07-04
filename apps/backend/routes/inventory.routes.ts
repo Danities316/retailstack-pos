@@ -24,7 +24,7 @@ router.get('/logs', async (req: AuthRequest, res) => {
     where: whereClause,
     orderBy: { createdAt: 'desc' }, // Show most recent changes first
     include: {
-      product: { select: { name: true } }, // Include product name for context
+      product: { select: { productName: true } }, // Include product name for context
     },
   });
 

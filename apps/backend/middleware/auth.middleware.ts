@@ -5,18 +5,20 @@ export interface AuthRequest extends Request {
   user?: { userId: string; tenantId: string; role: string; };
 }
 
-export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const protect = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const bearer = req.headers.authorization;
   
 
   if (!bearer || !bearer.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized: No token provided.' });
+    res.status(401).json({ error: 'Unauthorized: No token provided.' });
+    return;
   }
 
   const [, token] = bearer.split(' ');
 
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid token format.' });
+    res.status(401).json({ error: 'Unauthorized: Invalid token format.' });
+    return;
   }
 
   try {
@@ -24,6 +26,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
     req.user = payload;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+    res.status(401).json({ error: 'Unauthorized: Invalid token.' });
+    return;
   }
 };

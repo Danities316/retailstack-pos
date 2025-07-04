@@ -1,0 +1,293 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// apps/backend/src/routes/user.routes.ts
+const express_1 = require("express");
+const client_1 = require("@prisma/client");
+const role_middleware_1 = require("../middleware/role.middleware");
+const crypto_1 = __importDefault(require("crypto"));
+const password_service_1 = require("../services/password.service");
+const router = (0, express_1.Router)();
+const prisma = new client_1.PrismaClient();
+router.use((0, role_middleware_1.checkRole)([client_1.UserRole.OWNER, client_1.UserRole.MANAGER, client_1.UserRole.SUPER_ADMIN]));
+router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, name, role, phoneNumber } = req.body;
+    const inviter = req.user;
+    console.log("See details: ", req.body);
+    if (!email || !role || !phoneNumber) {
+        res.status(400).json({ error: 'Email, role, and phone number are required.' });
+        return;
+    }
+    // Owners should not be able to create other Owners via this endpoint
+    if (role === client_1.UserRole.OWNER) {
+        res.status(403).json({ error: 'You cannot invite users with this role.' });
+        return;
+    }
+    try {
+        // Check if user already exists
+        const existingUser = yield prisma.user.findUnique({
+            where: { email }
+        });
+        if (existingUser) {
+            if (existingUser.email === email) {
+                // If roles are the same, return error
+                if (existingUser.role === role) {
+                    res.status(409).json({
+                        error: 'User already exists with this role.',
+                        existingUser: {
+                            id: existingUser.id,
+                            email: existingUser.email,
+                            role: existingUser.role
+                        }
+                    });
+                    return;
+                }
+                // If roles are different, check if it's a role change request
+                if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER') {
+                    res.status(409).json({
+                        error: 'User already exists with higher role. Would you like to downgrade the role?',
+                        existingUser: {
+                            id: existingUser.id,
+                            email: existingUser.email,
+                            currentRole: existingUser.role,
+                            requestedRole: role
+                        },
+                        requiresConfirmation: true
+                    });
+                    return;
+                }
+            }
+            else {
+                res.status(409).json({
+                    error: 'User already exists in another tenant.',
+                    existingUser: {
+                        id: existingUser.id,
+                        email: existingUser.email,
+                        role: existingUser.role
+                    }
+                });
+                return;
+            }
+        }
+        // If user doesn't exist, proceed with invitation
+        const setupToken = crypto_1.default.randomBytes(32).toString('hex');
+        const setupTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        const hashedToken = crypto_1.default.createHash('sha256').update(setupToken).digest('hex');
+        const user = yield prisma.user.create({
+            data: {
+                email,
+                name,
+                phoneNumber,
+                password: 'password_not_set',
+                role: role,
+                tenantId: inviter.tenantId,
+                setupToken: hashedToken,
+                setupTokenExpires,
+            },
+        });
+        if (!user) {
+            res.status(500).json({
+                error: 'There us an error creating User'
+            });
+            return;
+        }
+        const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
+        console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
+        res.status(201).json({ message: 'Invitation sent successfully.', user: user });
+    }
+    catch (error) {
+        console.log("Failed to invite user.: ", error);
+        res.status(500).json({ error: 'Failed to invite user.', message: error instanceof Error ? error.message : String(error) });
+    }
+}));
+// POST /api/users/setup-account - Setup account with token
+router.post('/setup-account', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { token, password } = req.body;
+    if (!token || !password) {
+        res.status(400).json({
+            error: 'Token and password are required.'
+        });
+        return;
+    }
+    try {
+        // Hash the token to match the stored hash
+        const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
+        // Find user with this token
+        const user = yield prisma.user.findFirst({
+            where: {
+                setupToken: hashedToken,
+                setupTokenExpires: {
+                    gt: new Date() // Token hasn't expired
+                }
+            }
+        });
+        if (!user) {
+            res.status(400).json({
+                error: 'Invalid or expired setup token.'
+            });
+            return;
+        }
+        // Hash the new password
+        const hashedPassword = yield (0, password_service_1.hashPassword)(password);
+        // Update user details
+        const updatedUser = yield prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                setupToken: null, // Clear the setup token
+                setupTokenExpires: null // Clear the expiration
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true,
+                phoneNumber: true
+            }
+        });
+        res.json({
+            message: 'Account setup completed successfully.',
+            user: updatedUser
+        });
+    }
+    catch (error) {
+        console.error('Setup account error:', error);
+        res.status(500).json({
+            error: 'Failed to setup account.',
+            message: error instanceof Error ? error.message : String(error)
+        });
+    }
+}));
+// GET /api/users/setup-account/:token - Verify setup token
+router.get('/setup-account/:token', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { token } = req.params;
+    try {
+        const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
+        const user = yield prisma.user.findFirst({
+            where: {
+                setupToken: hashedToken,
+                setupTokenExpires: {
+                    gt: new Date()
+                }
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+            }
+        });
+        if (!user) {
+            res.status(400).json({
+                error: 'Invalid or expired setup token.'
+            });
+            return;
+        }
+        res.json({
+            message: 'Token is valid.',
+            user
+        });
+    }
+    catch (error) {
+        console.error('Verify token error:', error);
+        res.status(500).json({
+            error: 'Failed to verify token.',
+            message: error instanceof Error ? error.message : String(error)
+        });
+    }
+}));
+// GET /api/users - List users in the tenant with pagination, filtering, and search
+router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const tenantId = req.user.tenantId;
+    const { page = 1, limit = 20, role, search } = req.query;
+    // const { page = 1, limit = 20, role, isActive, search } = req.query;
+    // Build Prisma where clause
+    const where = { tenantId };
+    if (role)
+        where.role = role;
+    // if (typeof isActive !== 'undefined') where.isActive = isActive === 'true';
+    if (search) {
+        where.OR = [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } }
+        ];
+    }
+    const skip = (Number(page) - 1) * Number(limit);
+    const take = Number(limit);
+    const [users, total] = yield Promise.all([
+        prisma.user.findMany({
+            where,
+            skip,
+            take,
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                phoneNumber: true,
+                createdAt: true,
+                // isActive: true,
+            },
+        }),
+        prisma.user.count({ where })
+    ]);
+    res.json({
+        users,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / Number(limit))
+    });
+}));
+// GET /api/users/:id - Get a single user by id (tenant scoped)
+router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
+    const user = yield prisma.user.findFirst({
+        where: { id, tenantId },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            phoneNumber: true,
+            createdAt: true,
+            // isActive: true,
+        },
+    });
+    if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+    }
+    res.json(user);
+}));
+// DELETE /api/users/:id - Delete a user by id (tenant scoped, cannot delete self)
+router.delete('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
+    const currentUserId = req.user.userId;
+    if (id === currentUserId) {
+        res.status(400).json({ error: 'You cannot delete yourself.' });
+        return;
+    }
+    const user = yield prisma.user.findFirst({ where: { id, tenantId } });
+    if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+    }
+    yield prisma.user.delete({ where: { id } });
+    res.status(204).send();
+}));
+exports.default = router;
