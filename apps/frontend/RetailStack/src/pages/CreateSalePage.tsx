@@ -32,7 +32,7 @@ export const CreateSalePage = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/products', {
+        const response = await fetch('https://retailstack-pos.onrender.com/api/products', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

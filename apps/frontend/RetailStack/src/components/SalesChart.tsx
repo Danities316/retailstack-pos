@@ -54,7 +54,7 @@ export const SalesChart = ({ tenantId, token }: SalesChartProps) => {
     <Card title="Sales Performance" className="h-full">
       <div className="flex justify-between items-center mb-6 ml-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-medium text-gray-800">Revenue Overview</h3>
+        <h3 className="text-lg font-medium text-gray-800">Revenue Overview</h3>
           {isOffline && (
             <span className="ml-2 px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-800 font-semibold">Offline</span>
           )}
@@ -88,38 +88,38 @@ export const SalesChart = ({ tenantId, token }: SalesChartProps) => {
         ) : noOfflineData ? (
           <div className="flex items-center justify-center h-full text-yellow-600">No offline data available. Please connect to the internet at least once.</div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
               data={data}
-              margin={{
-                top: 5,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="time" />
-              <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-              <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-              <Tooltip />
-              <Legend />
-              <Bar
-                yAxisId="left"
-                dataKey="sales"
-                name="Sales (₦)"
-                fill="#4f46e5"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                yAxisId="right"
-                dataKey="transactions"
-                name="Transactions"
-                fill="#10b981"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+            margin={{
+              top: 5,
+              right: 30,
+              left: 20,
+              bottom: 5,
+            }}
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="time" />
+            <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+            <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+            <Tooltip />
+            <Legend />
+            <Bar
+              yAxisId="left"
+              dataKey="sales"
+              name="Sales (₦)"
+              fill="#4f46e5"
+              radius={[4, 4, 0, 0]}
+            />
+            <Bar
+              yAxisId="right"
+              dataKey="transactions"
+              name="Transactions"
+              fill="#10b981"
+              radius={[4, 4, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
         )}
       </div>
     </Card>
