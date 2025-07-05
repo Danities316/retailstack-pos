@@ -103,7 +103,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       return;
     }
     
-    const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
+    const setupLink = `https://retailstack-pos.onrender.com/api/users/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
 
     res.status(201).json({ message: 'Invitation sent successfully.', user: user });
