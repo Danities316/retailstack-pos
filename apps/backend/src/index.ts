@@ -21,8 +21,9 @@ const app = express();
 // CORS configuration for production
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
-  '*', 
-  'https://retailstack-pos.vercel.app', 
+  'http://localhost:3000', // Local backend
+  'https://your-vercel-domain.vercel.app', // Replace with your actual Vercel domain
+  'https://retailstack-pos.vercel.app', // Example Vercel domain
 ];
 
 app.use(cors({
@@ -38,7 +39,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-tenant-id']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
