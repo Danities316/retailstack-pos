@@ -17,22 +17,14 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   console.log("See details: ", req.body)
 
   if (!email || !role || !phoneNumber) {
-<<<<<<< HEAD
     res.status(400).json({ error: 'Email, role, and phone number are required.' });
     return;
-=======
-    return res.status(400).json({ error: 'Email, role, and phone number are required.' });
->>>>>>> f3fdb7e (Initial commit)
   }
 
   // Owners should not be able to create other Owners via this endpoint
   if (role === UserRole.OWNER) {
-<<<<<<< HEAD
     res.status(403).json({ error: 'You cannot invite users with this role.' });
     return;
-=======
-    return res.status(403).json({ error: 'You cannot invite users with this role.' });
->>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -46,11 +38,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       if (existingUser.email === email) {
         // If roles are the same, return error
         if (existingUser.role === role) {
-<<<<<<< HEAD
           res.status(409).json({ 
-=======
-          return res.status(409).json({ 
->>>>>>> f3fdb7e (Initial commit)
             error: 'User already exists with this role.',
             existingUser: {
               id: existingUser.id,
@@ -58,21 +46,14 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
               role: existingUser.role
             }
           });
-<<<<<<< HEAD
           return;
-=======
->>>>>>> f3fdb7e (Initial commit)
         }
 
         // If roles are different, check if it's a role change request
         
         
         if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER') {
-<<<<<<< HEAD
           res.status(409).json({
-=======
-          return res.status(409).json({
->>>>>>> f3fdb7e (Initial commit)
             error: 'User already exists with higher role. Would you like to downgrade the role?',
             existingUser: {
               id: existingUser.id,
@@ -82,16 +63,10 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             },
             requiresConfirmation: true
           });
-<<<<<<< HEAD
           return;
         } 
       } else {
         res.status(409).json({ 
-=======
-        } 
-      } else {
-        return res.status(409).json({ 
->>>>>>> f3fdb7e (Initial commit)
           error: 'User already exists in another tenant.',
           existingUser: {
             id: existingUser.id,
@@ -99,10 +74,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             role: existingUser.role
           }
         });
-<<<<<<< HEAD
         return;
-=======
->>>>>>> f3fdb7e (Initial commit)
       }
     }
 
@@ -125,18 +97,11 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     });
 
     if(!user){
-<<<<<<< HEAD
       res.status(500).json({
         error: 'There us an error creating User'
       });
       return;
-    }
-=======
-      return res.status(500).json({
-        error: 'There us an error creating User'
-    })
   }
->>>>>>> f3fdb7e (Initial commit)
     
     const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
@@ -144,11 +109,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     res.status(201).json({ message: 'Invitation sent successfully.', user: user });
   } catch (error: any) {
     console.log("Failed to invite user.: ", error)
-<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to invite user.', message: error instanceof Error ? error.message : String(error) });
-=======
-    res.status(500).json({ error: 'Failed to invite user.', message: error.message });
->>>>>>> f3fdb7e (Initial commit)
   }
 });
 
@@ -157,16 +118,10 @@ router.post('/setup-account', async (req: any, res: any) => {
   const { token, password } = req.body;
 
   if (!token || !password) {
-<<<<<<< HEAD
     res.status(400).json({ 
       error: 'Token and password are required.' 
     });
     return;
-=======
-    return res.status(400).json({ 
-      error: 'Token and password are required.' 
-    });
->>>>>>> f3fdb7e (Initial commit)
   }
 
   try {
@@ -184,16 +139,10 @@ router.post('/setup-account', async (req: any, res: any) => {
     });
 
     if (!user) {
-<<<<<<< HEAD
       res.status(400).json({ 
         error: 'Invalid or expired setup token.' 
       });
       return;
-=======
-      return res.status(400).json({ 
-        error: 'Invalid or expired setup token.' 
-      });
->>>>>>> f3fdb7e (Initial commit)
     }
 
     // Hash the new password
@@ -225,11 +174,7 @@ router.post('/setup-account', async (req: any, res: any) => {
     console.error('Setup account error:', error);
     res.status(500).json({ 
       error: 'Failed to setup account.',
-<<<<<<< HEAD
       message: error instanceof Error ? error.message : String(error) 
-=======
-      message: error.message 
->>>>>>> f3fdb7e (Initial commit)
     });
   }
 });
@@ -257,16 +202,10 @@ router.get('/setup-account/:token', async (req: any, res: any) => {
     });
 
     if (!user) {
-<<<<<<< HEAD
       res.status(400).json({ 
         error: 'Invalid or expired setup token.' 
       });
       return;
-=======
-      return res.status(400).json({ 
-        error: 'Invalid or expired setup token.' 
-      });
->>>>>>> f3fdb7e (Initial commit)
     }
 
     res.json({ 
@@ -278,11 +217,7 @@ router.get('/setup-account/:token', async (req: any, res: any) => {
     console.error('Verify token error:', error);
     res.status(500).json({ 
       error: 'Failed to verify token.',
-<<<<<<< HEAD
       message: error instanceof Error ? error.message : String(error) 
-=======
-      message: error.message 
->>>>>>> f3fdb7e (Initial commit)
     });
   }
 });
@@ -354,12 +289,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
   });
 
   if (!user) {
-<<<<<<< HEAD
     res.status(404).json({ error: 'User not found' });
     return;
-=======
-    return res.status(404).json({ error: 'User not found' });
->>>>>>> f3fdb7e (Initial commit)
   }
   res.json(user);
 });
@@ -371,22 +302,14 @@ router.delete('/:id', async (req: AuthRequest, res) => {
   const currentUserId = req.user!.userId;
 
   if (id === currentUserId) {
-<<<<<<< HEAD
     res.status(400).json({ error: 'You cannot delete yourself.' });
     return;
-=======
-    return res.status(400).json({ error: 'You cannot delete yourself.' });
->>>>>>> f3fdb7e (Initial commit)
   }
 
   const user = await prisma.user.findFirst({ where: { id, tenantId } });
   if (!user) {
-<<<<<<< HEAD
     res.status(404).json({ error: 'User not found' });
     return;
-=======
-    return res.status(404).json({ error: 'User not found' });
->>>>>>> f3fdb7e (Initial commit)
   }
 
   await prisma.user.delete({ where: { id } });
