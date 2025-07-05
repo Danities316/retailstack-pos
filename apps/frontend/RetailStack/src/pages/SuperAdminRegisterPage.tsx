@@ -29,7 +29,7 @@ export const SuperAdminRegisterPage = () => {
     setError(null)
     setSuccess(null)
     try {
-      const res = await fetch('http://localhost:3000/api/superadmin/tenants', {
+      const res = await fetch('https://retailstack-pos.onrender.com/api/superadmin/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

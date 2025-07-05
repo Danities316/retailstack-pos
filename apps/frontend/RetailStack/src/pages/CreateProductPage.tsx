@@ -102,103 +102,103 @@ export const CreateProductPage = () => {
       <div className="w-full max-w-2xl bg-white rounded-xl shadow border p-8">
         <h1 className="text-2xl font-bold text-blue-600 mb-2">Create New Product</h1>
         <p className="text-gray-800 mb-6">Fill in the details below to add a new product.</p>
-        {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-        {success && <p className="text-green-600 text-sm mb-4">{success}</p>}
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      {success && <p className="text-green-600 text-sm mb-4">{success}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-5 text-gray-800">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              name="productName"
-              placeholder="Product Name *"
-              value={form.productName}
-              onChange={handleChange}
-              required
-              className="text-gray-800"
-            />
-            <Input
-              name="productImage"
-              placeholder="Product Image URL"
-              value={form.productImage}
-              onChange={handleChange}
-              className="text-gray-800"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              name="productColor"
-              placeholder="Product Color"
-              value={form.productColor}
-              onChange={handleChange}
-              className="text-gray-800"
-            />
-            <select
-              name="categoryId"
-              value={form.categoryId}
-              onChange={handleChange}
-              className="border rounded-md px-3 py-2 w-full text-gray-800"
-              disabled={categoriesLoading}
-            >
-              <option value="">
-                {categoriesLoading ? 'Loading categories...' : 'Select Category (Optional)'}
-              </option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.categoryName}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <Input
-            name="productDescription"
-            placeholder="Product Description"
-            value={form.productDescription}
+            name="productName"
+            placeholder="Product Name *"
+            value={form.productName}
             onChange={handleChange}
-            className="text-gray-800"
+            required
+              className="text-gray-800"
           />
+          <Input
+            name="productImage"
+            placeholder="Product Image URL"
+            value={form.productImage}
+            onChange={handleChange}
+              className="text-gray-800"
+          />
+        </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              name="costPrice"
-              type="number"
-              step="0.01"
-              placeholder="Cost Price *"
-              value={form.costPrice}
-              onChange={handleChange}
-              required
+          <Input
+            name="productColor"
+            placeholder="Product Color"
+            value={form.productColor}
+            onChange={handleChange}
               className="text-gray-800"
-            />
-            <Input
-              name="sellingPrice"
-              type="number"
-              step="0.01"
-              placeholder="Selling Price *"
-              value={form.sellingPrice}
-              onChange={handleChange}
-              required
-              className="text-gray-800"
-            />
-          </div>
+          />
+          <select
+            name="categoryId"
+            value={form.categoryId}
+            onChange={handleChange}
+              className="border rounded-md px-3 py-2 w-full text-gray-800"
+            disabled={categoriesLoading}
+          >
+            <option value="">
+              {categoriesLoading ? 'Loading categories...' : 'Select Category (Optional)'}
+            </option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.categoryName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <Input
+          name="productDescription"
+          placeholder="Product Description"
+          value={form.productDescription}
+          onChange={handleChange}
+            className="text-gray-800"
+        />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              name="quantity"
-              type="number"
-              placeholder="Quantity"
-              value={form.quantity}
-              onChange={handleChange}
+          <Input
+            name="costPrice"
+            type="number"
+            step="0.01"
+            placeholder="Cost Price *"
+            value={form.costPrice}
+            onChange={handleChange}
+            required
               className="text-gray-800"
-            />
-            <Input
-              name="stock"
-              type="number"
-              placeholder="Stock"
-              value={form.stock}
-              onChange={handleChange}
+          />
+          <Input
+            name="sellingPrice"
+            type="number"
+            step="0.01"
+            placeholder="Selling Price *"
+            value={form.sellingPrice}
+            onChange={handleChange}
+            required
               className="text-gray-800"
-            />
-          </div>
+          />
+        </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            name="quantity"
+            type="number"
+            placeholder="Quantity"
+            value={form.quantity}
+            onChange={handleChange}
+              className="text-gray-800"
+          />
+          <Input
+            name="stock"
+            type="number"
+            placeholder="Stock"
+            value={form.stock}
+            onChange={handleChange}
+              className="text-gray-800"
+          />
+        </div>
 
           <div className="flex gap-4 justify-end">
             <Button
@@ -206,19 +206,19 @@ export const CreateProductPage = () => {
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-400 text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150"
             >
-              {loading ? 'Creating...' : 'Create Product'}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate('/dashboard/products')}
+            {loading ? 'Creating...' : 'Create Product'}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => navigate('/dashboard/products')}
               className="bg-gray-400 hover:bg-gray-800  hover:text-white text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150"
       
-            >
-              Cancel
-            </Button>
-          </div>
-        </form>
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
       </div>
     </div>
   )
