@@ -1,28 +1,35 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addHours, addDays, addWeeks, format, getDay, isSameWeek } from 'date-fns';
+import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addHours, addDays, addWeeks, format, getDay, getWeek, isSameWeek } from 'date-fns';
 
 const prisma = new PrismaClient();
 const router = Router();
 
 // Helper to get tenantId from user session or query/header
 function getTenantId(req: any): string | undefined {
+  // Adjust this logic based on your auth/session implementation
+  // Example: tenantId from req.user (populated by auth middleware)
   if (req.user && req.user.tenantId) return req.user.tenantId;
   if (req.query.tenantId) return req.query.tenantId as string;
   if (req.headers['x-tenant-id']) return req.headers['x-tenant-id'] as string;
   return undefined;
 }
 
+router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
+
 router.get('/quick-stats', async (req: Request, res: Response) => {
   try {
-    const tenantId = getTenantId(req);
     if (!tenantId) {
+<<<<<<< HEAD
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
+=======
       return res.status(400).json({ error: 'Missing tenantId' });
+>>>>>>> f3fdb7e (Initial commit)
     }
 
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
-    const yesterdayStart = startOfDay(subDays(new Date(), 1));
     const yesterdayEnd = endOfDay(subDays(new Date(), 1));
 
     // Sales for today
@@ -45,6 +52,8 @@ router.get('/quick-stats', async (req: Request, res: Response) => {
     const totalSales = todaySales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
     const transactions = todaySales.length;
     const avgSale = transactions > 0 ? totalSales / transactions : 0;
+
+    // Tax: If you have a tax field, sum it. Otherwise, set to 0 or calculate if possible.
     const taxCollected = 0; // Placeholder
 
     // Compare with yesterday
@@ -52,18 +61,31 @@ router.get('/quick-stats', async (req: Request, res: Response) => {
     const compareYesterday = yesterdayTotal === 0
       ? '+100%'
       : `${((totalSales - yesterdayTotal) / yesterdayTotal * 100).toFixed(0)}%`;
+      
+      const result = {
+        totalSales: `₦${totalSales.toFixed(2)}`,
+        transactions,
+        avgSale: `₦${avgSale.toFixed(2)}`,
+        taxCollected: `₦${taxCollected.toFixed(2)}`,
+        compareYesterday: compareYesterday.startsWith('-') ? compareYesterday : `+${compareYesterday}`
+      }
+     res.json(result);
 
-    const result = {
-      totalSales: `₦${totalSales.toFixed(2)}`,
-      transactions,
-      avgSale: `₦${avgSale.toFixed(2)}`,
-      taxCollected: `₦${taxCollected.toFixed(2)}`,
-      compareYesterday: compareYesterday.startsWith('-') ? compareYesterday : `+${compareYesterday}`
-    };
-    res.json(result);
   } catch (err) {
     console.error(err);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to fetch quick stats', message: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.get('/sales-chart', async (req: any, res: any): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    if (!tenantId) {
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
+=======
+    res.status(500).json({ error: 'Failed to fetch quick stats' });
   }
 });
 
@@ -72,6 +94,7 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
     const tenantId = getTenantId(req);
     if (!tenantId) {
       return res.status(400).json({ error: 'Missing tenantId' });
+>>>>>>> f3fdb7e (Initial commit)
     }
     const range = (req.query.range as string) || 'today';
     const now = new Date();
@@ -93,7 +116,12 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
+<<<<<<< HEAD
+      res.json({ data });
+      return;
+=======
       return res.json({ data });
+>>>>>>> f3fdb7e (Initial commit)
     } else if (range === 'week') {
       const start = startOfWeek(now, { weekStartsOn: 1 }); // Monday
       const end = endOfWeek(now, { weekStartsOn: 1 });
@@ -111,7 +139,12 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
+<<<<<<< HEAD
+      res.json({ data });
+      return;
+=======
       return res.json({ data });
+>>>>>>> f3fdb7e (Initial commit)
     } else if (range === 'month') {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
@@ -133,9 +166,12 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-      return res.json({ data });
+<<<<<<< HEAD
+      res.json({ data });
+      return;
     } else {
-      return res.status(400).json({ error: 'Invalid range' });
+      res.status(400).json({ error: 'Invalid range' });
+      return;
     }
   } catch (err) {
     console.error(err);
@@ -143,32 +179,60 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/recent-sales', async (req: any, res: any): Promise<void> => {
+=======
+      return res.json({ data });
+    } else {
+      return res.status(400).json({ error: 'Invalid range' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch sales chart data' });
+  }
+});
+
 router.get('/recent-sales', async (req: Request, res: Response) => {
+>>>>>>> f3fdb7e (Initial commit)
   try {
+   
     const tenantId = getTenantId(req);
     if (!tenantId) {
+<<<<<<< HEAD
+      res.status(400).json({ error: 'Missing tenantId' });
+      return;
+=======
       return res.status(400).json({ error: 'Missing tenantId' });
+>>>>>>> f3fdb7e (Initial commit)
     }
     const limit = parseInt(req.query.limit as string) || 5;
     const sales = await prisma.sale.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
       take: limit,
-      include: { items: true },
     });
 
+    console.log("see data: ", sales)
     const data = sales.map(sale => ({
       id: sale.id,
       customer: 'N/A',
+<<<<<<< HEAD
+      items: 0, // Since items is not in the Sale model, default to 0
+=======
       items: Array.isArray(sale.items) ? sale.items.length : 0,
+>>>>>>> f3fdb7e (Initial commit)
       total: Number(sale.totalAmount),
       time: sale.createdAt,
       status: 'Completed',
     }));
+    
     res.json({ data });
   } catch (err) {
     console.error(err);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to fetch recent sales', message: err instanceof Error ? err.message : String(err) });
+=======
+    res.status(500).json({ error: 'Failed to fetch recent sales' });
+>>>>>>> f3fdb7e (Initial commit)
   }
 });
 
