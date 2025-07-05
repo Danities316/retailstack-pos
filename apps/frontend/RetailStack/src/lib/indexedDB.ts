@@ -1,4 +1,3 @@
-// src/lib/indexedDB.ts
 import { openDB, DBSchema, IDBPDatabase, deleteDB } from 'idb'
 
 interface RetailStackDB extends DBSchema {
