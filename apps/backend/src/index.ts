@@ -22,7 +22,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
   'http://localhost:3000', // Local backend
-  'https://vercel.com/danities316s-projects/retailstack-pos/DR7BvMHJxijpPuhSHbP7Z2egWJNi', // Replace with your actual Vercel domain
+  'https://vercel.com/danities316s-projects/retailstack-pos/DR7BvMHJxijpPuhSHbP7Z2egWJNi',
 ];
 
 app.use(cors({
