@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_middleware_1 = require("../middleware/auth.middleware");
+// Route Imports
 const superadmin_routes_1 = __importDefault(require("../routes/superadmin.routes"));
 const auth_routes_1 = __importDefault(require("../routes/auth.routes"));
 // import tenantRoutes from '../routes/tenant.routes';
@@ -18,10 +19,12 @@ const inventory_routes_1 = __importDefault(require("../routes/inventory.routes")
 const dashboard_routes_1 = __importDefault(require("../routes/dashboard.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+// CORS configuration for production
 const allowedOrigins = [
     'http://localhost:5173', // Vite dev server
     'http://localhost:3000', // Local backend
-    'https://vercel.com/danities316s-projects/retailstack-pos/DR7BvMHJxijpPuhSHbP7Z2egWJNi',
+    'https://your-vercel-domain.vercel.app', // Replace with your actual Vercel domain
+    'https://retailstack-pos.vercel.app', // Example Vercel domain
 ];
 app.use((0, cors_1.default)({
     origin: function (origin, callback) {
@@ -56,6 +59,7 @@ app.use('/api/users', auth_middleware_1.protect, user_routes_1.default);
 app.use('/api/categories', auth_middleware_1.protect, category_routes_1.default);
 app.use('/api/inventory', auth_middleware_1.protect, inventory_routes_1.default);
 app.use('/api/dashboard', auth_middleware_1.protect, dashboard_routes_1.default);
+// ... Add other protected routes (e.g., sales, dashboard) here
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
