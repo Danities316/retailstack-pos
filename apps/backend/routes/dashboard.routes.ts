@@ -16,20 +16,21 @@ function getTenantId(req: any): string | undefined {
 }
 
 router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
-
-router.get('/quick-stats', async (req: Request, res: Response) => {
   try {
+    
+    const tenantId = getTenantId(req);
+    
     if (!tenantId) {
-<<<<<<< HEAD
       res.status(400).json({ error: 'Missing tenantId' });
       return;
-=======
-      return res.status(400).json({ error: 'Missing tenantId' });
->>>>>>> f3fdb7e (Initial commit)
     }
 
+    // Today
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
+
+    // Yesterday
+    const yesterdayStart = startOfDay(subDays(new Date(), 1));
     const yesterdayEnd = endOfDay(subDays(new Date(), 1));
 
     // Sales for today
@@ -73,7 +74,6 @@ router.get('/quick-stats', async (req: Request, res: Response) => {
 
   } catch (err) {
     console.error(err);
-<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to fetch quick stats', message: err instanceof Error ? err.message : String(err) });
   }
 });
@@ -84,17 +84,6 @@ router.get('/sales-chart', async (req: any, res: any): Promise<void> => {
     if (!tenantId) {
       res.status(400).json({ error: 'Missing tenantId' });
       return;
-=======
-    res.status(500).json({ error: 'Failed to fetch quick stats' });
-  }
-});
-
-router.get('/sales-chart', async (req: Request, res: Response) => {
-  try {
-    const tenantId = getTenantId(req);
-    if (!tenantId) {
-      return res.status(400).json({ error: 'Missing tenantId' });
->>>>>>> f3fdb7e (Initial commit)
     }
     const range = (req.query.range as string) || 'today';
     const now = new Date();
@@ -116,12 +105,8 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-<<<<<<< HEAD
       res.json({ data });
       return;
-=======
-      return res.json({ data });
->>>>>>> f3fdb7e (Initial commit)
     } else if (range === 'week') {
       const start = startOfWeek(now, { weekStartsOn: 1 }); // Monday
       const end = endOfWeek(now, { weekStartsOn: 1 });
@@ -139,12 +124,8 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-<<<<<<< HEAD
       res.json({ data });
       return;
-=======
-      return res.json({ data });
->>>>>>> f3fdb7e (Initial commit)
     } else if (range === 'month') {
       const start = startOfMonth(now);
       const end = endOfMonth(now);
@@ -166,7 +147,6 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
           transactions: group.length,
         };
       });
-<<<<<<< HEAD
       res.json({ data });
       return;
     } else {
@@ -180,29 +160,12 @@ router.get('/sales-chart', async (req: Request, res: Response) => {
 });
 
 router.get('/recent-sales', async (req: any, res: any): Promise<void> => {
-=======
-      return res.json({ data });
-    } else {
-      return res.status(400).json({ error: 'Invalid range' });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch sales chart data' });
-  }
-});
-
-router.get('/recent-sales', async (req: Request, res: Response) => {
->>>>>>> f3fdb7e (Initial commit)
   try {
    
     const tenantId = getTenantId(req);
     if (!tenantId) {
-<<<<<<< HEAD
       res.status(400).json({ error: 'Missing tenantId' });
       return;
-=======
-      return res.status(400).json({ error: 'Missing tenantId' });
->>>>>>> f3fdb7e (Initial commit)
     }
     const limit = parseInt(req.query.limit as string) || 5;
     const sales = await prisma.sale.findMany({
@@ -215,11 +178,7 @@ router.get('/recent-sales', async (req: Request, res: Response) => {
     const data = sales.map(sale => ({
       id: sale.id,
       customer: 'N/A',
-<<<<<<< HEAD
       items: 0, // Since items is not in the Sale model, default to 0
-=======
-      items: Array.isArray(sale.items) ? sale.items.length : 0,
->>>>>>> f3fdb7e (Initial commit)
       total: Number(sale.totalAmount),
       time: sale.createdAt,
       status: 'Completed',
@@ -228,11 +187,7 @@ router.get('/recent-sales', async (req: Request, res: Response) => {
     res.json({ data });
   } catch (err) {
     console.error(err);
-<<<<<<< HEAD
     res.status(500).json({ error: 'Failed to fetch recent sales', message: err instanceof Error ? err.message : String(err) });
-=======
-    res.status(500).json({ error: 'Failed to fetch recent sales' });
->>>>>>> f3fdb7e (Initial commit)
   }
 });
 

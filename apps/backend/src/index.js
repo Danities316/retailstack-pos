@@ -7,7 +7,6 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const auth_middleware_1 = require("../middleware/auth.middleware");
-// Route Imports
 const superadmin_routes_1 = __importDefault(require("../routes/superadmin.routes"));
 const auth_routes_1 = __importDefault(require("../routes/auth.routes"));
 // import tenantRoutes from '../routes/tenant.routes';
@@ -19,7 +18,27 @@ const inventory_routes_1 = __importDefault(require("../routes/inventory.routes")
 const dashboard_routes_1 = __importDefault(require("../routes/dashboard.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)());
+const allowedOrigins = [
+    'http://localhost:5173', // Vite dev server
+    'http://localhost:3000', // Local backend
+    'https://vercel.com/danities316s-projects/retailstack-pos/DR7BvMHJxijpPuhSHbP7Z2egWJNi',
+];
+app.use((0, cors_1.default)({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // --- Public Routes ---
@@ -37,7 +56,6 @@ app.use('/api/users', auth_middleware_1.protect, user_routes_1.default);
 app.use('/api/categories', auth_middleware_1.protect, category_routes_1.default);
 app.use('/api/inventory', auth_middleware_1.protect, inventory_routes_1.default);
 app.use('/api/dashboard', auth_middleware_1.protect, dashboard_routes_1.default);
-// ... Add other protected routes (e.g., sales, dashboard) here
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Backend server running on http://localhost:${PORT}`);
