@@ -21,9 +21,8 @@ const app = express();
 // CORS configuration for production
 const allowedOrigins = [
   'http://localhost:5173', // Vite dev server
-  'http://localhost:3000', // Local backend
-  'https://your-vercel-domain.vercel.app', // Replace with your actual Vercel domain
-  'https://retailstack-pos.vercel.app', // Example Vercel domain
+  '*', 
+  'https://retailstack-pos.vercel.app', 
 ];
 
 app.use(cors({
