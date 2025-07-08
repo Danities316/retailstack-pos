@@ -21,6 +21,7 @@ import { UserSetupPage } from './pages/UserSetupPage'
 import { UserDetailPage } from './pages/UserDetailPage'
 import { TenantsPage } from './pages/TenantsPage'
 import { TenantDetailPage } from './pages/TenantDetailPage'
+import HomePage from './pages/HomePage'
 import { useEffect } from 'react'
 import { offlineDB } from '@/lib/indexedDB'
 import { syncService } from '@/services/syncService'
@@ -44,7 +45,9 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<TenantRegisterPage />} />
             <Route path="/users/setup/:token" element={<UserSetupPage />} />
             {/* <Route path="/login/:slug" element={<LoginPage />} /> */}
          
