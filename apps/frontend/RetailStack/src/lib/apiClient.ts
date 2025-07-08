@@ -2,7 +2,7 @@ import { offlineDB } from './indexedDB'
 import { syncService } from '@/services/syncService'
 
 class ApiClient {
-  private baseURL = 'https://retailstack-pos.onrender.com/api'
+  private baseURL = import.meta.env.VITE_API_BASE_URL || 'https://retailstack-pos.onrender.com/api'
 
   async request(endpoint: string, options: RequestInit = {}) {
     const token = localStorage.getItem('auth_token')
@@ -25,8 +25,12 @@ class ApiClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
     } catch (error) {
-      // If offline, queue the request for later sync
-      if (!navigator.onLine) {
+      // Check if it's a network error (offline) or other error
+      const isNetworkError = error instanceof TypeError || 
+                            (error instanceof Error && error.message.includes('fetch')) ||
+                            !navigator.onLine
+      
+      if (isNetworkError) {
         await this.queueOfflineRequest(endpoint, options)
         throw new Error('Request queued for offline sync')
       }
