@@ -2,7 +2,7 @@ import { offlineDB } from './indexedDB'
 import { syncService } from '@/services/syncService'
 
 class ApiClient {
-  private baseURL = import.meta.env.VITE_API_BASE_URL || 'https://retailstack-pos.onrender.com/api'
+  private baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
   async request(endpoint: string, options: RequestInit = {}) {
     const token = localStorage.getItem('auth_token')

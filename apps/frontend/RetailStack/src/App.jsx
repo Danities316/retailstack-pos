@@ -42,31 +42,31 @@ function App() {
 
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<TenantRegisterPage />} />
             <Route path="/users/setup/:token" element={<UserSetupPage />} />
-            {/* <Route path="/login/:slug" element={<LoginPage />} /> */}
-         
+          {/* <Route path="/login/:slug" element={<LoginPage />} /> */}
+       
 
-          <Route
-              path="/dashboard/*"
-              element={
-                <ProtectedRoute>
+        <Route
+            path="/dashboard/*"
+            element={
+              <ProtectedRoute>
                   <DashboardLayout />
                 </ProtectedRoute>
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="register/tenant" element={<TenantRegisterPage />} />
-              <Route path="products" element={<ProductsPage />} />
-              <Route path="products/create" element={<CreateProductPage />} />
-              <Route path="sales" element={<SalesPage />} />
-              <Route path="sales/create" element={<CreateSalePage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                    <Route path="register/tenant" element={<TenantRegisterPage />} />
+                    <Route path="products" element={<ProductsPage />} />
+                    <Route path="products/create" element={<CreateProductPage />} />
+                    <Route path="sales" element={<SalesPage />} />
+                    <Route path="sales/create" element={<CreateSalePage />} />
               <Route path="sales/:id" element={<SaleDetailPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="categories/create" element={<CreateCategoryPage />} />
@@ -77,9 +77,9 @@ function App() {
               <Route path="tenants" element={<TenantsPage />} />
               <Route path="tenants/:id" element={<TenantDetailPage />} />
             </Route>
-             </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+           </Routes>
+      </AuthProvider>
+    </BrowserRouter>
     </ThemeProvider>
   )
 }
