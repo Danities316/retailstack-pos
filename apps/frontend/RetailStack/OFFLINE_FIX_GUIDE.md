@@ -25,7 +25,7 @@
 Go to your Vercel dashboard and add these environment variables:
 
 ```
-VITE_API_BASE_URL=https://retailstack-pos.onrender.com/api
+VITE_API_BASE_URL=http://localhost:3000/api
 ```
 
 ### 2. Redeploy Frontend

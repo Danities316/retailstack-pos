@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
+const baseURL = import.meta.env.VITE_API_BASE_URL
+
 
 export const LoginPage = () => {
   const { setToken } = useAuth()
@@ -19,7 +21,8 @@ export const LoginPage = () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`https://retailstack-pos.onrender.com/api/auth/login`, {
+      console.log("See base url: ", baseURL)
+      const res = await fetch(`${baseURL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

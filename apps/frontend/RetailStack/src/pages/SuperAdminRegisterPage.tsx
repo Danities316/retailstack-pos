@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
+
 export const SuperAdminRegisterPage = () => {
   const navigate = useNavigate()
   const [form, setForm] = useState({
@@ -18,6 +19,7 @@ export const SuperAdminRegisterPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const baseURL = import.meta.env.VITE_API_BASE_URL
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -29,7 +31,7 @@ export const SuperAdminRegisterPage = () => {
     setError(null)
     setSuccess(null)
     try {
-      const res = await fetch('https://retailstack-pos.onrender.com/api/superadmin/tenants', {
+      const res = await fetch(`${baseURL}/superadmin/tenants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
