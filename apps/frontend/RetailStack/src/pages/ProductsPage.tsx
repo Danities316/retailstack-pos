@@ -31,7 +31,7 @@ export const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [categories, setCategories] = useState<Array<{ id: string; categoryName: string }>>([])
-
+  const baseURL = import.meta.env.VITE_API_BASE_URL
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -42,7 +42,7 @@ export const ProductsPage = () => {
         setProducts(productsData)
         
         // Load categories
-        const categoriesResponse = await fetch('http://localhost:3000/api/categories', {
+        const categoriesResponse = await fetch(`${baseURL}/categories`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         if (categoriesResponse.ok) {

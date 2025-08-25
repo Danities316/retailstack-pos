@@ -17,6 +17,7 @@ export const TenantRegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const baseURL = import.meta.env.VITE_API_BASE_URL
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,7 +29,7 @@ export const TenantRegisterPage = () => {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch("http://localhost:3000/api/superadmin/tenants", {
+      const res = await fetch(`${baseURL}/superadmin/tenants`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, },
         body: JSON.stringify(form),

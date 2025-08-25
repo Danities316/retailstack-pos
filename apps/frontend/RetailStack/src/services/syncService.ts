@@ -41,9 +41,10 @@ class SyncService {
   private async processSyncItem(item: any) {
     try {
       const token = localStorage.getItem('auth_token')
+      const baseURL = import.meta.env.VITE_API_BASE_URL
       if (!token) return
 
-      const response = await fetch(`http://localhost:3000/api/${item.entity}`, {
+      const response = await fetch(`${baseURL}/${item.entity}`, {
         method: item.action === 'DELETE' ? 'DELETE' : 
                 item.action === 'CREATE' ? 'POST' : 'PUT',
         headers: {
@@ -70,11 +71,12 @@ class SyncService {
   private async syncLocalData() {
     // Sync products, sales, etc. from server to local
     const token = localStorage.getItem('auth_token')
+    const baseURL = import.meta.env.VITE_API_BASE_URL
     if (!token) return
 
     try {
       // Sync products
-      const productsResponse = await fetch('http://localhost:3000/api/products', {
+      const productsResponse = await fetch(`${baseURL}/products`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (productsResponse.ok) {
@@ -85,7 +87,7 @@ class SyncService {
       }
 
       // Sync sales
-      const salesResponse = await fetch('http://localhost:3000/api/sales', {
+      const salesResponse = await fetch(`${baseURL}/sales`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (salesResponse.ok) {

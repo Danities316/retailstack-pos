@@ -10,7 +10,7 @@ export const useNetworkStatus = () => {
       setIsOnline(true)
       // Trigger sync when coming back online
       try {
-        await syncService.syncOfflineData()
+        await syncService.syncData()
         setLastSync(Date.now())
         console.log('Offline data synced successfully')
       } catch (error) {
