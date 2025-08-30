@@ -50,6 +50,7 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
     stock, 
     categoryId 
   } = req.body;
+
   const tenantId = req.user!.tenantId;
   
   if (!productName || sellingPrice === undefined || costPrice === undefined) {
@@ -74,7 +75,6 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
     });
     res.status(201).json(newProduct);
   } catch (error: any) {
-    // P2003 is the foreign key constraint error code
     if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
        res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
        return;

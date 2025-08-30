@@ -1,13 +1,15 @@
-// apps/backend/src/routes/user.routes.ts
 import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { checkRole } from '../middleware/role.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 import crypto from 'crypto';
 import { hashPassword } from '../services/password.service';
+import dotenv from 'dotenv';
+
 
 const router = Router();
 const prisma = new PrismaClient();
+dotenv.config();
 
 router.use(checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]));
 
@@ -28,7 +30,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   }
 
   try {
-    // Check if user already exists
+  
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -50,9 +52,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
         }
 
         // If roles are different, check if it's a role change request
-        
-        
-        if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER') {
+        if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER' ) {
           res.status(409).json({
             error: 'User already exists with higher role. Would you like to downgrade the role?',
             existingUser: {
@@ -101,9 +101,9 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
         error: 'There us an error creating User'
       });
       return;
-  }
+    }
     
-    const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
+    const setupLink = `${process.env.BASE_URL}/api/users/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
 
     res.status(201).json({ message: 'Invitation sent successfully.', user: user });

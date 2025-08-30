@@ -22,9 +22,9 @@ router.get('/logs', async (req: AuthRequest, res) => {
 
   const logs = await prisma.inventoryLog.findMany({
     where: whereClause,
-    orderBy: { createdAt: 'desc' }, // Show most recent changes first
+    orderBy: { createdAt: 'desc' },
     include: {
-      product: { select: { productName: true } }, // Include product name for context
+      product: { select: { productName: true } }, 
     },
   });
 
