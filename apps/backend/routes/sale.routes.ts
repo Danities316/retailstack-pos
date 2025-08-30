@@ -7,19 +7,6 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // POST /api/sales - Create a new sale (Accessible to all roles)
-/**
- * const {
-			products,
-			description,
-			paymentType,
-			amountReceived,
-			totalAmount,
-			discount,
-			customerId,
-			repaymentDate,
-		} = req.body;
-
- */
 router.post('/', async (req: AuthRequest, res: any) => {
   const { paymentMethod, items } = req.body;
   // `items` should be an array like: [{ productId: '...', quantity: 2 }, ...]
@@ -32,7 +19,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
   }
 
   try {
-    // Use Prisma's interactive transaction for this complex operation
+   
     const sale = await prisma.$transaction(async (tx) => {
       // 1. Calculate the total amount based on current product prices
       let totalAmount = 0;
@@ -95,17 +82,16 @@ router.post('/', async (req: AuthRequest, res: any) => {
         await tx.inventoryLog.create({
           data: {
             productId: item.productId,
-            saleId: newSale.id, // Link the log to the sale
+            saleId: newSale.id, 
             tenantId: tenantId!,
-            change: -item.quantity, // Stock decreased
+            change: -item.quantity, 
             newStockLevel: newStockLevel,
             reason: 'SALE',
           },
         });
       }
 
-
-      // You can also add logic here to decrease product stock levels
+      //TODO: add logic here to decrease product stock levels
 
       return newSale;
     });
@@ -118,7 +104,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
   }
 });
 
-// GET /api/sales - List all sales for the tenant (Restricted to Owner/Manager)
+// GET /api/sales - List all sales for the tenant - Restricted to Owner/Manager
 router.get('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
   const tenantId = req.user!.tenantId;
 
@@ -128,7 +114,7 @@ router.get('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
     include: {
       items: { // Include the items for each sale
         include: {
-          product: { select: { productName: true } }, // Also include the product name
+          product: { select: { productName: true } },
         },
       },
     },

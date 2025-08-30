@@ -17,7 +17,7 @@ function getTenantId(req: any): string | undefined {
 
 router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
   try {
-    
+ 
     const tenantId = getTenantId(req);
     
     if (!tenantId) {
@@ -28,6 +28,8 @@ router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
     // Today
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
+
+    console.log("todayStart: ", todayStart);
 
     // Yesterday
     const yesterdayStart = startOfDay(subDays(new Date(), 1));
@@ -80,6 +82,7 @@ router.get('/quick-stats', async (req: any, res: any): Promise<void> => {
 
 router.get('/sales-chart', async (req: any, res: any): Promise<void> => {
   try {
+    
     const tenantId = getTenantId(req);
     if (!tenantId) {
       res.status(400).json({ error: 'Missing tenantId' });
@@ -174,7 +177,7 @@ router.get('/recent-sales', async (req: any, res: any): Promise<void> => {
       take: limit,
     });
 
-    console.log("see data: ", sales)
+   
     const data = sales.map(sale => ({
       id: sale.id,
       customer: 'N/A',

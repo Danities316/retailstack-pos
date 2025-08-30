@@ -175,7 +175,7 @@ router.get('/recent-sales', (req, res) => __awaiter(void 0, void 0, void 0, func
             orderBy: { createdAt: 'desc' },
             take: limit,
         });
-        console.log("see data: ", sales);
+        // console.log("see data: ", sales);
         const data = sales.map(sale => ({
             id: sale.id,
             customer: 'N/A',
