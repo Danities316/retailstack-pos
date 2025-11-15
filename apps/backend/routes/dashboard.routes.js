@@ -36,6 +36,7 @@ router.get('/quick-stats', (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Today
         const todayStart = (0, date_fns_1.startOfDay)(new Date());
         const todayEnd = (0, date_fns_1.endOfDay)(new Date());
+        console.log("todayStart: ", todayStart);
         // Yesterday
         const yesterdayStart = (0, date_fns_1.startOfDay)((0, date_fns_1.subDays)(new Date(), 1));
         const yesterdayEnd = (0, date_fns_1.endOfDay)((0, date_fns_1.subDays)(new Date(), 1));
@@ -175,7 +176,6 @@ router.get('/recent-sales', (req, res) => __awaiter(void 0, void 0, void 0, func
             orderBy: { createdAt: 'desc' },
             take: limit,
         });
-        // console.log("see data: ", sales);
         const data = sales.map(sale => ({
             id: sale.id,
             customer: 'N/A',
