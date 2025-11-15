@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import {Prisma, PrismaClient, UserRole } from '@prisma/client';
+import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
+import { json } from 'stream/consumers';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -84,7 +86,7 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
 });
 
 // PUT /api/products/:id - Update an existing product
-router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
+router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { 
     productName, 
@@ -95,12 +97,16 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
     sellingPrice, 
     quantity, 
     stock, 
+    updatedAt,
     categoryId 
   } = req.body;
   const tenantId = req.user!.tenantId;
 
   try {
-    const product = await prisma.product.update({
+    const existing = await prisma.product.findUnique({ where: { id } });
+    
+    if(!existing || new Date(updatedAt) > existing.updatedAt){
+      const updated = await prisma.product.update({
       where: { id, tenantId },
       data: { 
         productName, 
@@ -114,7 +120,8 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
         categoryId 
       },
     });
-    res.json(product);
+    res.json(updated);
+    }
   } catch (error: any) {
      if (error.code === 'P2003' && error.meta?.field_name === 'Product_categoryId_fkey (index)') {
        res.status(400).json({ error: 'Invalid categoryId. The specified category does not exist.' });
