@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
@@ -152,7 +152,7 @@ type SaleItemInput = {
   price: number;
 };
 
-router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
+router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { items, updatedAt, paymentMethod } = req.body as { items: SaleItemInput[]; updatedAt: string; paymentMethod: string };
   const tenantId = req.user!.tenantId;
@@ -164,7 +164,8 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
     });
 
     if (!existingSale) {
-      return res.status(404).json({ error: 'Sale not found.' });
+      res.status(404).json({ error: 'Sale not found.' });
+      return;
     }
 
     // If client update is newer, apply it
@@ -183,10 +184,12 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
           paymentMethod,
         },
       });
-      return res.json(updatedSale);
+      res.json(updatedSale);
+      return;
     } else {
       // Server has newer data, ignore client update
-      return res.status(409).json({ message: 'Conflict: server has newer data', serverData: existingSale });
+      res.status(409).json({ message: 'Conflict: server has newer data', serverData: existingSale });
+      return;
     }
   } catch (error) {
     console.error('Sale update failed:', error);
