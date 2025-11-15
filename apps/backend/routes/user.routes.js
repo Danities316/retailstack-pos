@@ -12,14 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// apps/backend/src/routes/user.routes.ts
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const role_middleware_1 = require("../middleware/role.middleware");
 const crypto_1 = __importDefault(require("crypto"));
 const password_service_1 = require("../services/password.service");
+const dotenv_1 = __importDefault(require("dotenv"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+dotenv_1.default.config();
 router.use((0, role_middleware_1.checkRole)([client_1.UserRole.OWNER, client_1.UserRole.MANAGER, client_1.UserRole.SUPER_ADMIN]));
 router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, name, role, phoneNumber } = req.body;
@@ -35,7 +36,6 @@ router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function*
         return;
     }
     try {
-        // Check if user already exists
         const existingUser = yield prisma.user.findUnique({
             where: { email }
         });
@@ -102,7 +102,7 @@ router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
             return;
         }
-        const setupLink = `http://localhost:3000/api/users/setup-account?token=${setupToken}`;
+        const setupLink = `${process.env.BASE_URL}/api/users/setup-account?token=${setupToken}`;
         console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
         res.status(201).json({ message: 'Invitation sent successfully.', user: user });
     }

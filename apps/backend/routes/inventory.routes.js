@@ -27,9 +27,9 @@ router.get('/logs', (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
     const logs = yield prisma.inventoryLog.findMany({
         where: whereClause,
-        orderBy: { createdAt: 'desc' }, // Show most recent changes first
+        orderBy: { createdAt: 'desc' },
         include: {
-            product: { select: { productName: true } }, // Include product name for context
+            product: { select: { productName: true } },
         },
     });
     res.json(logs);
