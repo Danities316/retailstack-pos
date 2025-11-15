@@ -20,7 +20,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
   }
 
   try {
-   
+
     const sale = await prisma.$transaction(async (tx) => {
       // 1. Calculate the total amount based on current product prices
       let totalAmount = 0;
@@ -46,7 +46,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
           productId: item.productId,
           quantity: item.quantity,
           price: product.sellingPrice,
-          updatedAt: new Date() 
+          updatedAt: new Date()
         });
       }
 
@@ -85,9 +85,9 @@ router.post('/', async (req: AuthRequest, res: any) => {
         await tx.inventoryLog.create({
           data: {
             productId: item.productId,
-            saleId: newSale.id, 
+            saleId: newSale.id,
             tenantId: tenantId!,
-            change: -item.quantity, 
+            change: -item.quantity,
             newStockLevel: newStockLevel,
             reason: 'SALE',
           },
@@ -168,34 +168,42 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
     }
 
     // If client update is newer, apply it
-  if (new Date(updatedAt) > existingSale.updatedAt) {
-   const updatedSale = await prisma.sale.update({
-      where: { id, tenantId },
-      data: {
-        items: {
-          deleteMany: {},
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-          })),
+    if (new Date(updatedAt) > existingSale.updatedAt) {
+      const updatedSale = await prisma.sale.update({
+        where: { id, tenantId },
+        data: {
+          items: {
+            deleteMany: {},
+            create: items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          },
+          paymentMethod,
         },
-        paymentMethod,
-      },
-    });
-    return res.json(updatedSale);
-  } else {
-    // Server has newer data, ignore client update
-    return res.status(409).json({ message: 'Conflict: server has newer data', serverData: existingSale });
-  }
+      });
+      return res.json(updatedSale);
+    } else {
+      // Server has newer data, ignore client update
+      return res.status(409).json({ message: 'Conflict: server has newer data', serverData: existingSale });
+    }
   } catch (error) {
     console.error('Sale update failed:', error);
     res.status(500).json({ error: 'Failed to update sale.', details: error instanceof Error ? error.message : String(error) });
   }
 });
 
-router.post('/sync', req, res => {
-
-})
+router.post('/sync', async (req: AuthRequest, res: any) => {
+  // Example sync endpoint: return all sales for the tenant (can be adapted)
+  try {
+    const tenantId = req.user!.tenantId;
+    const sales = await prisma.sale.findMany({ where: { tenantId } });
+    res.status(200).json({ message: 'Sync successful', sales });
+  } catch (error) {
+    console.error('Sync failed:', error);
+    res.status(500).json({ error: 'Sync failed', details: error instanceof Error ? error.message : String(error) });
+  }
+});
 
 export default router;
