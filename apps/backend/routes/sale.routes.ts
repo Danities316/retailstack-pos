@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
+import { any } from 'zod';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -11,7 +12,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
   const { paymentMethod, items } = req.body;
   // `items` should be an array like: [{ productId: '...', quantity: 2 }, ...]
   const tenantId = req.user!.tenantId;
-  console.log("See items: ", items)
+  // console.log("See items: ", items)
 
   if (!paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: 'Payment method and a non-empty array of items are required.' });
@@ -44,7 +45,8 @@ router.post('/', async (req: AuthRequest, res: any) => {
         saleItemsData.push({
           productId: item.productId,
           quantity: item.quantity,
-          price: product.sellingPrice, 
+          price: product.sellingPrice,
+          updatedAt: new Date() 
         });
       }
 
@@ -54,6 +56,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
           tenantId: tenantId!,
           totalAmount,
           paymentMethod,
+          updatedAt: new Date(),
           items: {
             create: saleItemsData,
           },
@@ -141,5 +144,58 @@ router.get('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
   }
   res.json(sale);
 });
+
+
+type SaleItemInput = {
+  productId: string;
+  quantity: number;
+  price: number;
+};
+
+router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { items, updatedAt, paymentMethod } = req.body as { items: SaleItemInput[]; updatedAt: string; paymentMethod: string };
+  const tenantId = req.user!.tenantId;
+
+  try {
+    const existingSale = await prisma.sale.findUnique({
+      where: { id, tenantId },
+      include: { items: true },
+    });
+
+    if (!existingSale) {
+      return res.status(404).json({ error: 'Sale not found.' });
+    }
+
+    // If client update is newer, apply it
+  if (new Date(updatedAt) > existingSale.updatedAt) {
+   const updatedSale = await prisma.sale.update({
+      where: { id, tenantId },
+      data: {
+        items: {
+          deleteMany: {},
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+        paymentMethod,
+      },
+    });
+    return res.json(updatedSale);
+  } else {
+    // Server has newer data, ignore client update
+    return res.status(409).json({ message: 'Conflict: server has newer data', serverData: existingSale });
+  }
+  } catch (error) {
+    console.error('Sale update failed:', error);
+    res.status(500).json({ error: 'Failed to update sale.', details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+router.post('/sync', req, res => {
+
+})
 
 export default router;

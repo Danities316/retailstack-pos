@@ -12,6 +12,7 @@ import saleRoutes from '../routes/sale.routes';
 import categoryRoutes from '../routes/category.routes';
 import inventoryRoutes from '../routes/inventory.routes';
 import dashboardRoutes from '../routes/dashboard.routes';
+import stripePaymentRoutes from '../routes/stripe.route';
 
 
 dotenv.config();
@@ -19,12 +20,12 @@ const app = express();
 
 // CORS configuration for production
 const allowedOrigins = [
-  'http://localhost:5173', 
+  'http://localhost:5173',
   'http://localhost:4173',
-  'http://localhost:3000', 
+  'http://localhost:3000',
   'https://your-vercel-domain.vercel.app',
   'https://retailstack-pos.vercel.app',
-  '*' 
+  '*'
 ];
 
 app.use(cors({
@@ -35,7 +36,7 @@ app.use(cors({
 //   origin: function (origin, callback) {
 //     // Allow requests with no origin (like mobile apps or curl requests)
 //     if (!origin) return callback(null, true);
-    
+
 //     if (allowedOrigins.indexOf(origin) !== -1) {
 //       callback(null, true);
 //     } else {
@@ -63,6 +64,7 @@ app.use('/api/users', protect, userRoutes);
 app.use('/api/categories', protect, categoryRoutes);
 app.use('/api/inventory', protect, inventoryRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
+app.use('/api/dashboard/payment', protect, stripePaymentRoutes);
 
 
 const PORT = process.env.PORT || 3000;

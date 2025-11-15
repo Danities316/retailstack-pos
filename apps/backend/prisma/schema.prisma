@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Tenant {
@@ -19,7 +20,8 @@ model Tenant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   loyverseApiKey String?
-
+  transactions Transaction[]
+  tenantPaymentAccount TenantPaymentAccount[] 
   users    User[]
   products Product[]
   sales    Sale[]
@@ -74,9 +76,10 @@ model Sale {
   totalAmount Decimal
   paymentMethod String
   createdAt   DateTime   @default(now())
-
+  updatedAt   DateTime @updatedAt
   tenantId    String
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
   items       SaleItem[]
   inventoryLogs InventoryLog[]
   @@index([tenantId])
@@ -91,6 +94,7 @@ model SaleItem {
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  updatedAt   DateTime @updatedAt
   @@index([saleId])
 }
 
@@ -127,10 +131,67 @@ model InventoryLog {
   // Optional link to the sale that triggered this log
   saleId          String?
   sale            Sale?    @relation(fields: [saleId], references: [id], onDelete:SetNull)
-
+  updatedAt   DateTime @updatedAt
   @@index([tenantId])
   @@index([productId])
   @@index([saleId])
+}
+model Transaction {
+  id                String   @id @default(uuid())
+  tenantId          String
+  saleId            String
+  provider          Provider @default(STRIPE)
+  providerPaymentId String
+  amount            Int      // stored in cents
+  currency          String
+  status            TransactionStatus @default(PENDING)
+  paymentMethod     String
+  metadata          Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  sale              Sale     @relation(fields: [saleId], references: [id])
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  refunds           Refund[]
+}
+
+model Refund {
+  id               String   @id @default(uuid())
+  transactionId    String
+  amount           Int      // stored in cents
+  providerRefundId String
+  reason           String?
+  status           RefundStatus @default(PENDING)
+  createdAt        DateTime @default(now())
+
+  transaction      Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model TenantPaymentAccount {
+  tenantId         String   @id
+  stripeAccountId  String
+  onboardingStatus String
+  createdAt        DateTime @default(now())
+
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+enum Provider {
+  STRIPE
+  CASH
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
 }
 
 enum UserRole {

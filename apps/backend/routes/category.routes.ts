@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
@@ -21,7 +21,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
   try {
     const newCategory = await prisma.category.create({
-      data: { categoryName, parentId, tenantId: tenantId! },
+      data: { categoryName, parentId, updatedAt: new Date(), tenantId: tenantId! },
     });
     res.status(201).json(newCategory);
   } catch (error: any) {
@@ -71,17 +71,22 @@ router.get('/:id', async (req: AuthRequest, res) => {
 });
 
 // PUT /api/categories/:id - Update a category
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res: any) => {
   const { id } = req.params;
-  const { categoryName, parentId } = req.body;
+  const { categoryName, updatedAt, parentId } = req.body;
   const tenantId = req.user!.tenantId;
 
   try {
-    const updatedCategory = await prisma.category.update({
+    const existing = await prisma.category.findUnique({ where: { id, tenantId } });
+
+    if(!existing || new Date(updatedAt) < existing.updatedAt) {
+       const updatedCategory = await prisma.category.update({
       where: { id, tenantId },
-      data: { categoryName, parentId },
+      data: { categoryName, parentId, updatedAt: new Date(updatedAt) },
     });
-    res.json(updatedCategory);
+     return res.json(updatedCategory);
+    }
+    res.status(400).json({ error: 'No update performed. The provided updatedAt is not newer.' });
   } catch (error) {
     res.status(404).json({ error: 'Category not found or you do not have permission to update it.' });
   }
