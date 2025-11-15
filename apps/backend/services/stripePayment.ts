@@ -37,7 +37,7 @@ export class StripeService {
     }: {
         paymentIntentId: string
         amount: number
-        reason?: string
+        reason?: Stripe.RefundCreateParams.Reason
     }) {
         const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
@@ -58,7 +58,7 @@ export class StripeService {
                 sig,
                 process.env.STRIPE_WEBHOOK_SECRET!
             )
-        } catch (err) {
+        } catch (err: any) {
             return res.status(400).send(`Webhook Error: ${err.message}`)
         }
 
