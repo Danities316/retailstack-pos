@@ -2,7 +2,7 @@ import Stripe from 'stripe'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-09-30.clover' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {})
 
 export class StripeService {
     // Create PaymentIntent (supports Stripe Connect)
