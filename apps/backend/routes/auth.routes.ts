@@ -12,12 +12,14 @@ const prisma = new PrismaClient();
 // POST /api/auth/login
 router.post('/login', async (req: any, res: any) => {
   const { email, password } = req.body;
-  
+
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
+
+  console.log('Login attempt for email:', user);
 
   if (!user || !(await comparePassword(password, user.password))) {
     return res.status(401).json({ error: 'Invalid credentials.' });
@@ -31,20 +33,21 @@ router.post('/login', async (req: any, res: any) => {
   }
 
   const token = jwt.sign(
-    { userId: user.id, tenantId: user.tenantId, role: user.role },
+    { userId: user.id, tenantId: user.tenantId, role: user.role, name: user.name },
     jwtSecret,
     { expiresIn: '1d' }
   );
 
-  res.json({ 
+  res.json({
     message: 'Login successful',
-    token, 
-    user: { 
-      id: user.id, 
-      email: user.email, 
-      role: user.role, 
-      tenantId: user.tenantId 
-    } 
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      name: user.name,
+    }
   });
 });
 
@@ -57,10 +60,11 @@ router.post('/setup-account', async (req: any, res: any) => {
   }
 
   // Hash the token provided by the user to find it in the database
-  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  // const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  console.log('Setup account with token:', token);
 
   const user = await prisma.user.findUnique({
-    where: { setupToken: hashedToken },
+    where: { setupToken: token },
   });
 
   if (!user || !user.setupTokenExpires || user.setupTokenExpires < new Date()) {
@@ -80,6 +84,50 @@ router.post('/setup-account', async (req: any, res: any) => {
   });
 
   res.json({ message: 'Account setup successful. You can now log in.' });
+});
+
+// GET /api/auth/setup-account/:token - Verify setup token. This is a public route
+router.get('/setup-account/:token', async (req: any, res: any) => {
+  const { token } = req.params;
+
+  try {
+
+    // const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await prisma.user.findFirst({
+      where: {
+        setupToken: token,
+        setupTokenExpires: {
+          gt: new Date()
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      }
+    });
+
+    if (!user) {
+      res.status(400).json({
+        error: 'Invalid or expired setup token.'
+      });
+      return;
+    }
+
+    res.json({
+      message: 'Token is valid.',
+      user
+    });
+
+  } catch (error: any) {
+    console.error('Verify token error:', error);
+    res.status(500).json({
+      error: 'Failed to verify token.',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 export default router;

@@ -21,6 +21,8 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 dotenv_1.default.config();
+
+
 router.use((0, role_middleware_1.checkRole)([client_1.UserRole.OWNER, client_1.UserRole.MANAGER, client_1.UserRole.SUPER_ADMIN]));
 router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, name, role, phoneNumber } = req.body;
@@ -169,44 +171,7 @@ router.post('/setup-account', (req, res) => __awaiter(void 0, void 0, void 0, fu
         });
     }
 }));
-// GET /api/users/setup-account/:token - Verify setup token
-router.get('/setup-account/:token', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { token } = req.params;
-    try {
-        const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
-        const user = yield prisma.user.findFirst({
-            where: {
-                setupToken: hashedToken,
-                setupTokenExpires: {
-                    gt: new Date()
-                }
-            },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true
-            }
-        });
-        if (!user) {
-            res.status(400).json({
-                error: 'Invalid or expired setup token.'
-            });
-            return;
-        }
-        res.json({
-            message: 'Token is valid.',
-            user
-        });
-    }
-    catch (error) {
-        console.error('Verify token error:', error);
-        res.status(500).json({
-            error: 'Failed to verify token.',
-            message: error instanceof Error ? error.message : String(error)
-        });
-    }
-}));
+
 // GET /api/users - List users in the tenant with pagination, filtering, and search
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const tenantId = req.user.tenantId;

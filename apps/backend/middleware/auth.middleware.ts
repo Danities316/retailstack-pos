@@ -2,12 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export interface AuthRequest extends Request {
-  user?: { userId: string; tenantId: string; role: string; };
+  user?: { userId: string; tenantId: string; role: string; name: string; };
 }
 
 export const protect = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const bearer = req.headers.authorization;
-  
+
 
   if (!bearer || !bearer.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Unauthorized: No token provided.' });

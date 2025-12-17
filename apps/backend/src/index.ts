@@ -13,6 +13,10 @@ import categoryRoutes from '../routes/category.routes';
 import inventoryRoutes from '../routes/inventory.routes';
 import dashboardRoutes from '../routes/dashboard.routes';
 import stripePaymentRoutes from '../routes/stripe.route';
+import managerDashboardRoutes from '../routes/manager.routes';
+import settingsRoutes from '../routes/setting.routes';
+import reportsRoutes from '../routes/reports.routes';
+import shiftRoutes from '../routes/shift.routes';
 
 
 dotenv.config();
@@ -54,19 +58,21 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
+app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/auth', authRoutes);
 // --- Protected Routes ---
 // All routes defined after this line require a valid JWT.
-app.use('/api/superadmin', protect, superAdminRoutes);
 app.use('/api/products', protect, productRoutes);
 app.use('/api/sales', protect, saleRoutes);
+app.use('/api/shifts', protect, shiftRoutes);
 app.use('/api/users', protect, userRoutes);
 app.use('/api/categories', protect, categoryRoutes);
 app.use('/api/inventory', protect, inventoryRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/dashboard/payment', protect, stripePaymentRoutes);
-
-
+app.use('/api/dashboard/manager', protect, managerDashboardRoutes);
+app.use('/api/settings', protect, settingsRoutes);
+app.use('/api/reports', protect, reportsRoutes)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend server running on port:${PORT}`);

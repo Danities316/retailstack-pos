@@ -1,0 +1,4 @@
+sku,product_name,category,brand,description,retail_price,cost_price,stock_quantity,reorder_point,barcode,status
+ADINO-TSHIRT-RED-S,Classic Red T‑Shirt (Small),Men's Apparel,Adino Wear,Soft cotton classic fit t‑shirt.,2500,1200.5,50,5,10010001,active
+ADINO-LAPTOP-ECO,EcoBook Laptop 13‑inch,Electronics,Tech Corp,Lightweight laptop ideal for work.,450000,380000,15,3,10010002,active
+ADINO-SNACK-CHIPS,Potato Chips Large Pack,Snacks,Crispy Co,Extra crunchy sea salt chips.,550,300,200,20,10010003,active

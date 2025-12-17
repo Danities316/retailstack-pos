@@ -7,11 +7,11 @@ import { hashPassword } from '../services/password.service';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Protect all routes in this file and ensure only SUPER_ADMIN can access them
-router.use(checkRole([UserRole.SUPER_ADMIN]));
+
 
 // post /api/superadmin/tenants - create tenants
-router.post('/tenants', async (req: AuthRequest, res: any) => {
+router.post('/tenants', async (req: any, res: any) => {
+  console.log("Creating tenantssssssssssss:", req.body);
   const {
     tenantName,
     phoneNumber,
@@ -24,20 +24,23 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
 
   } = req.body;
 
+  console.log("See req body: ", req.body)
+
   if (!tenantName || !phoneNumber || !ownerEmail || !ownerPassword) {
-    res.status(400).json({ 
-      error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.' 
+    res.status(400).json({
+      error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.'
     });
     return;
   }
 
+
   try {
     const hashedPassword = await hashPassword(ownerPassword);
-    
+
     const newTenant = await prisma.tenant.create({
       data: {
         name: tenantName,
-        phoneNumber,      
+        phoneNumber,
         logoUrl,
         colorScheme,
         loyverseApiKey,
@@ -74,6 +77,9 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
   }
 });
 
+// Protect all routes in this file and ensure only SUPER_ADMIN can access them
+router.use(checkRole([UserRole.SUPER_ADMIN]));
+
 // GET /api/superadmin/tenants/:id - Get a single tenant's details
 router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
   const { id } = req.params;
@@ -93,18 +99,19 @@ router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
 router.put('/tenants/:id', async (req, res) => {
   const { id } = req.params;
   const { name, logoUrl, colorScheme } = req.body;
-  
+
   const updatedTenant = await prisma.tenant.update({
     where: { id },
     data: { name, logoUrl, colorScheme },
   });
-  
+
   res.json(updatedTenant);
 });
 
 // GET /api/superadmin/tenants - List all tenants with their users
-router.get('/tenants', async (req: AuthRequest, res) => {
+router.get('/tenants', async (req, res) => {
   const tenants = await prisma.tenant.findMany({
+    where: { users: { some: { role: UserRole.OWNER } } },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,

@@ -8,21 +8,46 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // POST /api/sales - Create a new sale (Accessible to all roles)
+// sale.routes.ts - REPLACING the existing POST /api/sales route
+
+// POST /api/sales - Create a new sale (Accessible to all authenticated roles)
 router.post('/', async (req: AuthRequest, res: any) => {
+
   const { paymentMethod, items } = req.body;
-  // `items` should be an array like: [{ productId: '...', quantity: 2 }, ...]
-  const tenantId = req.user!.tenantId;
-  // console.log("See items: ", items)
+
+  const tenantId = req.user!.tenantId; // Tenant ID from Auth Token
+  const cashierId = req.user!.userId; // Cashier ID from Auth Token
+  const cashierRole = req.user!.role; // Cashier Role from Auth Token
 
   if (!paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: 'Payment method and a non-empty array of items are required.' });
     return;
   }
 
-  try {
+  let activeShift = null;
 
+  if (cashierRole === 'CASHIER') {
+    // Only CASHIERs are REQUIRED to have an active shift
+    activeShift = await prisma.shift.findFirst({
+      where: { cashierId, tenantId, endTime: null },
+      select: { id: true, startFloat: true }
+    });
+
+    if (!activeShift) {
+      // FORBIDDEN SALE: Cashier is not clocked in
+      return res.status(403).json({ error: 'You must clock in to start a shift before making sales.' });
+    }
+  } else {
+    // MANAGER and OWNER roles can make sales without an explicit shift.
+    // We still check if they happen to be clocked in, just in case.
+    activeShift = await prisma.shift.findFirst({
+      where: { cashierId, tenantId, endTime: null },
+      select: { id: true, startFloat: true }
+    });
+  }
+
+  try {
     const sale = await prisma.$transaction(async (tx) => {
-      // 1. Calculate the total amount based on current product prices
       let totalAmount = 0;
       const saleItemsData = [];
 
@@ -32,78 +57,58 @@ router.post('/', async (req: AuthRequest, res: any) => {
         });
 
         if (!product) {
-          throw new Error(`Product with ID ${item.productId} not found.`);
+          throw new Error(`Product not found: ${item.productId}`);
         }
 
+        // Stock check (Reliability)
         if (product.stock < item.quantity) {
-          throw new Error(`Not enough stock for product "${product.productName}". Available: ${product.stock}, Requested: ${item.quantity}`);
+          throw new Error(`Stockout: Only ${product.stock} units of ${product.productName} available.`);
         }
 
-        const itemTotal = Number(product.sellingPrice) * Number(item.quantity);
-        console.log("See itemsTotl: ", itemTotal)
-        totalAmount += itemTotal;
+        // Use the product's current price (security: prevent client-side manipulation)
+        const itemPrice = product.sellingPrice;
+        totalAmount = Number(totalAmount) + (Number(itemPrice) * Number(item.quantity));
+
         saleItemsData.push({
           productId: item.productId,
           quantity: item.quantity,
-          price: product.sellingPrice,
-          updatedAt: new Date()
+          price: itemPrice, // Store the price at time of sale
         });
-      }
 
-      // 2. Create the main Sale record
-      const newSale = await tx.sale.create({
-        data: {
-          tenantId: tenantId!,
-          totalAmount,
-          paymentMethod,
-          updatedAt: new Date(),
-          items: {
-            create: saleItemsData,
-          },
-        },
-      });
-
-      // 3. Create the associated SaleItem records
-      await tx.saleItem.createMany({
-        data: saleItemsData.map(item => ({
-          ...item,
-          saleId: newSale.id,
-        })),
-      });
-
-      for (const item of items) {
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
-        const newStockLevel = product!.stock - item.quantity;
-
-        // 1. Update the product's stock count
+        // 2. Decrement inventory (Critical for transaction integrity)
         await tx.product.update({
           where: { id: item.productId },
-          data: { stock: newStockLevel },
-        });
-
-        // 2. Create an immutable log of this change
-        await tx.inventoryLog.create({
-          data: {
-            productId: item.productId,
-            saleId: newSale.id,
-            tenantId: tenantId!,
-            change: -item.quantity,
-            newStockLevel: newStockLevel,
-            reason: 'SALE',
-          },
+          data: { stock: { decrement: item.quantity } },
         });
       }
 
-      //TODO: add logic here to decrease product stock levels
+      // 3. Create the Sale record
+      const newSale = await tx.sale.create({
+        data: {
+          tenantId,
+          userId: cashierId,
+          shiftId: activeShift ? activeShift.id : null,
+          totalAmount,
+          paymentMethod,
+          items: {
+            createMany: {
+              data: saleItemsData,
+            },
+          },
+        },
+        include: { items: true },
+      });
 
       return newSale;
     });
 
     res.status(201).json(sale);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Sale creation failed:', error);
-    res.status(500).json({ error: 'Failed to create sale.', details: error instanceof Error ? error.message : String(error) });
+    // Error Handling: Use empathetic, human-readable feedback (Clarity)
+    const message = error.message.includes('Stockout') ? error.message : 'Transaction failed due to an unknown error.';
+    res.status(400).json({ error: message });
   }
 });
 

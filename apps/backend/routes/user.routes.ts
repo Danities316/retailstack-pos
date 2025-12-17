@@ -11,12 +11,14 @@ const router = Router();
 const prisma = new PrismaClient();
 dotenv.config();
 
+
+
+
 router.use(checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]));
 
 router.post('/invite', async (req: AuthRequest, res: any) => {
   const { email, name, role, phoneNumber } = req.body;
   const inviter = req.user!;
-  console.log("See details: ", req.body)
 
   if (!email || !role || !phoneNumber) {
     res.status(400).json({ error: 'Email, role, and phone number are required.' });
@@ -30,17 +32,17 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   }
 
   try {
-  
+
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
-      
+
       if (existingUser.email === email) {
         // If roles are the same, return error
         if (existingUser.role === role) {
-          res.status(409).json({ 
+          res.status(409).json({
             error: 'User already exists with this role.',
             existingUser: {
               id: existingUser.id,
@@ -52,7 +54,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
         }
 
         // If roles are different, check if it's a role change request
-        if (existingUser.role === 'MANAGER' || existingUser.role === 'OWNER' ) {
+        if (existingUser.role === 'MANAGER') {
           res.status(409).json({
             error: 'User already exists with higher role. Would you like to downgrade the role?',
             existingUser: {
@@ -64,9 +66,9 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             requiresConfirmation: true
           });
           return;
-        } 
+        }
       } else {
-        res.status(409).json({ 
+        res.status(409).json({
           error: 'User already exists in another tenant.',
           existingUser: {
             id: existingUser.id,
@@ -82,7 +84,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     const setupToken = crypto.randomBytes(32).toString('hex');
     const setupTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
     const hashedToken = crypto.createHash('sha256').update(setupToken).digest('hex');
-    
+
     const user = await prisma.user.create({
       data: {
         email,
@@ -96,13 +98,13 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       },
     });
 
-    if(!user){
+    if (!user) {
       res.status(500).json({
         error: 'There us an error creating User'
       });
       return;
     }
-    
+
     const setupLink = `${process.env.BASE_URL}/api/users/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
 
@@ -118,8 +120,8 @@ router.post('/setup-account', async (req: any, res: any) => {
   const { token, password } = req.body;
 
   if (!token || !password) {
-    res.status(400).json({ 
-      error: 'Token and password are required.' 
+    res.status(400).json({
+      error: 'Token and password are required.'
     });
     return;
   }
@@ -139,8 +141,8 @@ router.post('/setup-account', async (req: any, res: any) => {
     });
 
     if (!user) {
-      res.status(400).json({ 
-        error: 'Invalid or expired setup token.' 
+      res.status(400).json({
+        error: 'Invalid or expired setup token.'
       });
       return;
     }
@@ -165,62 +167,21 @@ router.post('/setup-account', async (req: any, res: any) => {
       }
     });
 
-    res.json({ 
+    res.json({
       message: 'Account setup completed successfully.',
       user: updatedUser
     });
 
   } catch (error: any) {
     console.error('Setup account error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to setup account.',
-      message: error instanceof Error ? error.message : String(error) 
+      message: error instanceof Error ? error.message : String(error)
     });
   }
 });
 
-// GET /api/users/setup-account/:token - Verify setup token
-router.get('/setup-account/:token', async (req: any, res: any) => {
-  const { token } = req.params;
 
-  try {
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await prisma.user.findFirst({
-      where: {
-        setupToken: hashedToken,
-        setupTokenExpires: {
-          gt: new Date()
-        }
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true
-      }
-    });
-
-    if (!user) {
-      res.status(400).json({ 
-        error: 'Invalid or expired setup token.' 
-      });
-      return;
-    }
-
-    res.json({ 
-      message: 'Token is valid.',
-      user 
-    });
-
-  } catch (error: any) {
-    console.error('Verify token error:', error);
-    res.status(500).json({ 
-      error: 'Failed to verify token.',
-      message: error instanceof Error ? error.message : String(error) 
-    });
-  }
-});
 
 // GET /api/users - List users in the tenant with pagination, filtering, and search
 router.get('/', async (req: AuthRequest, res) => {
