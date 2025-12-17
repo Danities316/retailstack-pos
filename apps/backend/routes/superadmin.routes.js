@@ -15,11 +15,12 @@ const role_middleware_1 = require("../middleware/role.middleware");
 const password_service_1 = require("../services/password.service");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
-// Protect all routes in this file and ensure only SUPER_ADMIN can access them
-router.use((0, role_middleware_1.checkRole)([client_1.UserRole.SUPER_ADMIN]));
+
+
 // post /api/superadmin/tenants - create tenants
 router.post('/tenants', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { tenantName, phoneNumber, logoUrl, colorScheme, loyverseApiKey, ownerName, ownerEmail, ownerPassword, } = req.body;
+    console.log("Creating tenant:", req.body);
     if (!tenantName || !phoneNumber || !ownerEmail || !ownerPassword) {
         res.status(400).json({
             error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.'
@@ -66,6 +67,8 @@ router.post('/tenants', (req, res) => __awaiter(void 0, void 0, void 0, function
         res.status(500).json({ error: 'Failed to create tenant.', message: error instanceof Error ? error.message : String(error) });
     }
 }));
+// Protect all routes in this file and ensure only SUPER_ADMIN can access them
+router.use((0, role_middleware_1.checkRole)([client_1.UserRole.SUPER_ADMIN]));
 // GET /api/superadmin/tenants/:id - Get a single tenant's details
 router.get('/tenants/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;

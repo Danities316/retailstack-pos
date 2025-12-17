@@ -54,10 +54,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', auth_routes_1.default);
 // --- Protected Routes ---
 // All routes defined after this line require a valid JWT.
-app.use('/api/superadmin', auth_middleware_1.protect, superadmin_routes_1.default);
+app.use('/api/superadmin', superadmin_routes_1.default);
 app.use('/api/products', auth_middleware_1.protect, product_routes_1.default);
 app.use('/api/sales', auth_middleware_1.protect, sale_routes_1.default);
-app.use('/api/users', auth_middleware_1.protect, user_routes_1.default);
+app.use('/api/users', user_middleware_1.protect, user_routes_1.default);
 app.use('/api/categories', auth_middleware_1.protect, category_routes_1.default);
 app.use('/api/inventory', auth_middleware_1.protect, inventory_routes_1.default);
 app.use('/api/dashboard', auth_middleware_1.protect, dashboard_routes_1.default);

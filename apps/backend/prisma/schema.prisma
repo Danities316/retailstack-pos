@@ -8,7 +8,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model Tenant {
@@ -25,8 +25,11 @@ model Tenant {
   users    User[]
   products Product[]
   sales    Sale[]
+  Shifts   Shift[]
   categories Category[]
   inventoryLogs InventoryLog[]
+  storeSettings     StoreSettings?
+  emailTemplates    EmailTemplate[]
 }
 
 model User {
@@ -38,7 +41,7 @@ model User {
   role      UserRole @default(CASHIER) // Roles include Owner, Manager, Cashier 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  shifts          Shift[]
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   setupToken         String?   @unique
@@ -57,6 +60,8 @@ model Product {
   quantity       Int      @default(0)
   stock       Int      @default(0)
   createdAt   DateTime @default(now())
+  barcode     String?  @unique
+  sku         String?
   updatedAt   DateTime @updatedAt
 
   tenantId String
@@ -67,21 +72,30 @@ model Product {
   categoryId String? // Optional, a product might not have a category
   category   Category? @relation(fields: [categoryId], references: [id], onDelete:SetNull) // If category is deleted, set this field to null
 
+  @@index([productName])
   @@index([tenantId])
   @@index([categoryId])
+  @@unique([sku, tenantId])
 }
 
 model Sale {
   id          String     @id @default(cuid())
   totalAmount Decimal
   paymentMethod String
+  taxRate     Decimal    @default(0.0) // e.g., 0.075 for 7.5%
+  taxAmount   Decimal    @default(0.0) // calculated: subtotal * taxRate
+  subtotal    Decimal    @default(0.0) // before tax
   createdAt   DateTime   @default(now())
   updatedAt   DateTime @updatedAt
   tenantId    String
   tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   items       SaleItem[]
+  userId      String
   inventoryLogs InventoryLog[]
+  shiftId         String?   
+  shift           Shift?    @relation(fields: [shiftId], references: [id])
+  @@index([shiftId])
   @@index([tenantId])
 }
 
@@ -167,6 +181,48 @@ model Refund {
   transaction      Transaction @relation(fields: [transactionId], references: [id])
 }
 
+model StoreSettings {
+  id                String   @id @default(uuid())
+  tenantId          String   @unique
+  storeName         String
+  storeAddress      String?
+  storePhone        String?
+  storeTaxId        String?
+  operatingHoursStart String?  // e.g., "09:00"
+  operatingHoursEnd String?    // e.g., "18:00"
+  businessType      String?    // e.g., "retail", "f&b", "pharmacy"
+  currency          String   @default("USD")
+  language          String   @default("en")
+  dateFormat        String   @default("MM/DD/YYYY")
+  timeFormat        String   @default("HH:mm")
+  numberFormat      String   @default("en-US") // locale
+  logoUrl           String?
+  receiptHeader     String?
+  receiptFooter     String?
+  theme             String   @default("light") // "light" or "dark"
+  offlineModeEnabled Boolean @default(true)
+  autoSyncInterval  Int      @default(300) // seconds
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model EmailTemplate {
+  id                String   @id @default(uuid())
+  tenantId          String
+  templateType      String   // "receipt", "refund", "invoice"
+  subject           String
+  htmlContent       String   // HTML email template
+  variables         String?  // JSON array of variable names
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  @@unique([tenantId, templateType])
+}
+
 model TenantPaymentAccount {
   tenantId         String   @id
   stripeAccountId  String
@@ -174,6 +230,24 @@ model TenantPaymentAccount {
   createdAt        DateTime @default(now())
 
   tenant           Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Shift {
+  id              String      @id @default(cuid())
+  tenantId        String      // Mandatory for multi-tenancy
+  cashierId       String      // The user who clocked in
+  startTime       DateTime    @default(now())
+  endTime         DateTime?   // Nullable: indicates an active shift
+  startFloat      Decimal     @default(0.00) // Starting cash amount (float)
+  endFloat        Decimal?    // Closing cash count (for manager reconciliation)
+  reconciliation  Json?       // Stores reconciliation details (variance, manager notes, etc.)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  tenant          Tenant      @relation(fields: [tenantId], references: [id])
+  cashier         User        @relation(fields: [cashierId], references: [id])
+  sales           Sale[]      // All sales made during this shift
+  @@index([tenantId])
+  @@index([cashierId])
 }
 
 enum Provider {
@@ -200,3 +274,4 @@ enum UserRole {
   MANAGER
   CASHIER
 }
+

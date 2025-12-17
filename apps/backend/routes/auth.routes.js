@@ -30,13 +30,14 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
     if (!user || !(yield (0, password_service_1.comparePassword)(password, user.password))) {
         return res.status(401).json({ error: 'Invalid credentials.' });
     }
+    // console.log('Login attempt for email:', user);
     // Ensure the JWT_SECRET is loaded
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
         console.error('JWT_SECRET not found in environment variables.');
         return res.status(500).json({ error: 'Internal server error: JWT secret is not configured.' });
     }
-    const token = jsonwebtoken_1.default.sign({ userId: user.id, tenantId: user.tenantId, role: user.role }, jwtSecret, { expiresIn: '1d' });
+    const token = jsonwebtoken_1.default.sign({ userId: user.id, tenantId: user.tenantId, role: user.role, name: user.name }, jwtSecret, { expiresIn: '1d' });
     res.json({
         message: 'Login successful',
         token,
@@ -44,7 +45,8 @@ router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* 
             id: user.id,
             email: user.email,
             role: user.role,
-            tenantId: user.tenantId
+            tenantId: user.tenantId,
+            name: user.name,
         }
     });
 }));
@@ -55,9 +57,10 @@ router.post('/setup-account', (req, res) => __awaiter(void 0, void 0, void 0, fu
         return res.status(400).json({ error: 'Token and password are required.' });
     }
     // Hash the token provided by the user to find it in the database
-    const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
+    // const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
+    console.log('Setup account with token:', token);
     const user = yield prisma.user.findUnique({
-        where: { setupToken: hashedToken },
+        where: { setupToken: token },
     });
     if (!user || !user.setupTokenExpires || user.setupTokenExpires < new Date()) {
         return res.status(400).json({ error: 'Invalid or expired setup token.' });
@@ -73,5 +76,45 @@ router.post('/setup-account', (req, res) => __awaiter(void 0, void 0, void 0, fu
         },
     });
     res.json({ message: 'Account setup successful. You can now log in.' });
+}));
+// GET /api/users/setup-account/:token - Verify setup token
+router.get('/setup-account/:token', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { token } = req.params;
+    console.log("Hashed token: ", token);
+    try {
+        // const hashedToken = crypto_1.default.createHash('sha256').update(token).digest('hex');
+        // console.log("Hashed token: ", hashedToken);
+        const user = yield prisma.user.findFirst({
+            where: {
+                setupToken: token,
+                setupTokenExpires: {
+                    gt: new Date()
+                }
+            },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+            }
+        });
+        if (!user) {
+            res.status(400).json({
+                error: 'Invalid or expired setup token.'
+            });
+            return;
+        }
+        res.json({
+            message: 'Token is valid.',
+            user
+        });
+    }
+    catch (error) {
+        console.error('Verify token error:', error);
+        res.status(500).json({
+            error: 'Failed to verify token.',
+            message: error instanceof Error ? error.message : String(error)
+        });
+    }
 }));
 exports.default = router;
