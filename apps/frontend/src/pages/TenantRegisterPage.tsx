@@ -8,12 +8,6 @@ import { Store, Mail, Lock, User, Phone, UserPlus, Loader2, ArrowRight } from 'l
 // Define the brand color for consistency
 const HERO_GOLD = '#D4AF37';
 
-// ----------------------------------------------------------------------
-// FIX: InputWithIcon component is defined OUTSIDE the main component
-// This prevents the component from being redefined on every render,
-// which is the cause of the single-character typing bug (loss of focus).
-// ----------------------------------------------------------------------
-
 interface InputProps {
   Icon: React.ElementType;
   name: keyof typeof defaultFormState; // Ensure type safety for form keys
@@ -56,8 +50,8 @@ export const TenantRegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const baseURL = "http://localhost:3000/api"
-  // const baseURL = import.meta.env.VITE_API_BASE_URL
+  // const baseURL = "http://localhost:3000/api"
+  const baseURL = import.meta.env.VITE_API_BASE_URL
 
   // ----------------------------------------------------------------------
   // FIX: Using functional update for setForm for reliability

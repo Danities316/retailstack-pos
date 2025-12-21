@@ -13,6 +13,13 @@ import {
   Play
 } from 'lucide-react'
 import heroImage from '../assets/images/logo4.png'
+import heroImage2 from '../assets/images/hero1.jpg'
+import heroImage3 from '../assets/images/kwame.png'
+import heroImage4 from '../assets/images/love.png'
+import heroImage5 from '../assets/images/heroo.png'
+import heroImage6 from '../assets/images/hero2.jpg'
+import heroImage7 from '../assets/images/kwame.png'
+import heroImage8 from '../assets/images/hero4.jpg'
 
 const HERO_GOLD = '#D4AF37'
 
@@ -28,19 +35,19 @@ const testimonials = [
   {
     name: 'Amina Owusu',
     role: 'Owner — Amina Grocers',
-    image: "../src/assets/images/hero1.jpg",
+    image: heroImage2,
     quote: 'ADINO POS kept our shop running during load shedding. Reliable and simple.'
   },
   {
     name: 'Kwame Mensah',
     role: 'Manager — Market Square',
-    image: "../src/assets/images/kwame.png",
+    image: heroImage3,
     quote: 'Reports are clear and exports make accountant review easy.'
   },
   {
     name: 'Zainab Bello',
     role: 'Founder — ZB Boutique',
-    image: "../src/assets/images/love.png",
+    image: heroImage4,
     quote: 'Beautiful receipts and fast checkout. My staff learned it in a day.'
   }
 ]
@@ -162,7 +169,7 @@ const HomePage: React.FC = () => {
             {/* Single Hero Image */}
             <div className="w-full lg:w-1/2 rounded-3xl overflow-hidden shadow-2xl">
               <img
-                src="../src/assets/images/heroo.png"
+                src={heroImage5}
                 alt="Adino POS Interface with Cashier"
                 // Adjusted height classes: h-80 for mobile, h-96 for medium, aspect-video for better image control
                 className="w-full h-80 md:h-96 lg:h-auto object-cover object-center transform hover:scale-[1.02] transition duration-500 aspect-video lg:aspect-square"
@@ -234,7 +241,7 @@ const HomePage: React.FC = () => {
 
                 {/* Image 1: Tall/Feature Image */}
                 <img
-                  src="../src/assets/images/hero2.jpg"
+                  src={heroImage6}
                   alt="Market"
                   className="w-full h-80 md:h-96 object-cover rounded-2xl shadow-xl transform hover:scale-[1.01] transition duration-300" // Larger, deeper shadow, hover effect
                 />
@@ -242,7 +249,7 @@ const HomePage: React.FC = () => {
                 {/* Grid for the remaining 3 images */}
                 <div className="grid grid-cols-1 gap-4 md:gap-6">
                   <img
-                    src="../src/assets/images/kwame.png"
+                    src={heroImage7}
                     alt="Restaurant"
                     className="w-full h-60 md:h-48 object-cover rounded-2xl shadow-lg transform hover:scale-[1.01] transition duration-300" // Half-height to fit next two
                   />
@@ -250,7 +257,7 @@ const HomePage: React.FC = () => {
                   {/* Nested grid for the last two side-by-side */}
                   <div className="grid grid-cols-2 gap-4 md:gap-6">
                     <img
-                      src="../src/assets/images/hero4.jpg"
+                      src={heroImage8}
                       alt="Supermarket"
                       className="w-full h-36 md:h-44 object-cover rounded-2xl shadow-lg transform hover:scale-[1.01] transition duration-300"
                     />

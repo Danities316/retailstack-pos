@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext'
 const baseURL = import.meta.env.VITE_API_BASE_URL
 import { Mail, Lock, LogIn, Loader2, Home } from 'lucide-react';
 import { Link } from 'react-router-dom'
+import Image1 from '../assets/images/logo4.png'
+import Image2 from '../assets/images/pos.png'
 
 
 
@@ -34,7 +36,9 @@ export const LoginPage = () => {
       if (!res.ok) throw new Error(data.message || 'Login failed')
       console.log("data:", data);
 
-      setToken(data.token, data.user)
+      // Extract access token and refresh token from response
+      const { accessToken, refreshToken, user } = data.data || data
+      setToken(accessToken || data.token, user || data.user, refreshToken)
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.message)
@@ -60,7 +64,7 @@ export const LoginPage = () => {
             </h1> */}
 
             <img
-              src="../src/assets/images/logo4.png"
+              src={Image1}
               alt="ADINO POS Device"
               className="max-w-md mx-auto w-1/3 h-auto rounded-xl shadow-2xl transform scale-105"
             />
@@ -172,7 +176,7 @@ export const LoginPage = () => {
 
         <div className="relative z-10 text-white text-center">
           <img
-            src="../src/assets/images/pos.png" // Replace with your actual product image
+            src={Image2} // Replace with your actual product image
             alt="ADINO POS Device"
             className="max-w-md mx-auto w-full h-auto rounded-xl shadow-2xl transform scale-105"
           />

@@ -32,7 +32,7 @@ export const UserSetupPage = () => {
       }
 
       try {
-        const response = await apiClient.request(`/users/setup-account/${token}`)
+        const response = await apiClient.request(`/auth/setup-account/${token}`)
         setUserInfo(response.user)
       } catch (error) {
         setError('Invalid or expired setup link')
@@ -70,7 +70,7 @@ export const UserSetupPage = () => {
     }
 
     try {
-      await apiClient.request('/users/setup-account', {
+      await apiClient.request('/auth/setup-account', {
         method: 'POST',
         body: {
           token,
