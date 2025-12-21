@@ -1,9 +1,68 @@
 class ApiClient {
   private baseURL = import.meta.env.VITE_API_BASE_URL
+  private isRefreshing = false
+  private refreshSubscribers: Array<(token: string) => void> = []
+
+  private onRefreshed(token: string) {
+    this.refreshSubscribers.forEach(callback => callback(token))
+    this.refreshSubscribers = []
+  }
+
+  private addRefreshSubscriber(callback: (token: string) => void) {
+    this.refreshSubscribers.push(callback)
+  }
+
+  async refreshAccessToken(): Promise<string | null> {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (!refreshToken) {
+      this.clearAuth()
+      return null
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${refreshToken}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const { accessToken, refreshToken: newRefreshToken } = data.data || data
+
+        if (accessToken) {
+          localStorage.setItem('auth_token', accessToken)
+          if (newRefreshToken) {
+            localStorage.setItem('refresh_token', newRefreshToken)
+          }
+          this.onRefreshed(accessToken)
+          return accessToken
+        }
+      }
+
+      // Refresh failed, clear auth and redirect to login
+      this.clearAuth()
+      window.location.href = '/login'
+      return null
+    } catch (error) {
+      console.error('Token refresh failed:', error)
+      this.clearAuth()
+      window.location.href = '/login'
+      return null
+    }
+  }
+
+  private clearAuth() {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('tenant')
+  }
 
   async request(endpoint: string, options: RequestInit = {}) {
     const token = localStorage.getItem('auth_token')
-
 
     // Build headers carefully: do not force JSON content-type for FormData uploads
     const headers: Record<string, string> = {
@@ -26,11 +85,34 @@ class ApiClient {
       headers,
     }
 
-
-
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, config);
+      let response = await fetch(`${this.baseURL}${endpoint}`, config)
 
+      // Handle 401 Unauthorized - attempt token refresh
+      if (response.status === 401 && !this.isRefreshing) {
+        this.isRefreshing = true
+        const newToken = await this.refreshAccessToken()
+        this.isRefreshing = false
+
+        if (newToken) {
+          // Retry the original request with new token
+          const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
+          const retryConfig: RequestInit = { ...options, headers: retryHeaders }
+          response = await fetch(`${this.baseURL}${endpoint}`, retryConfig)
+        }
+      } else if (response.status === 401 && this.isRefreshing) {
+        // Token refresh is in progress, wait for it to complete
+        return new Promise((resolve, reject) => {
+          this.addRefreshSubscriber((token: string) => {
+            const retryHeaders = { ...headers, Authorization: `Bearer ${token}` }
+            const retryConfig: RequestInit = { ...options, headers: retryHeaders }
+            fetch(`${this.baseURL}${endpoint}`, retryConfig)
+              .then(res => res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}: ${res.statusText}`)))
+              .then(resolve)
+              .catch(reject)
+          })
+        })
+      }
 
       if (response.ok) {
         const data = await response.json()
