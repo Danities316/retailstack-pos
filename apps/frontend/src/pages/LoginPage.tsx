@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 const baseURL = import.meta.env.VITE_API_BASE_URL
 import { Mail, Lock, LogIn, Loader2, Home } from 'lucide-react';
-import { Link } from 'react-router-dom'
-import Image1 from '../assets/images/logo4.png'
-import Image2 from '../assets/images/pos.png'
+import { Link } from 'react-router-dom';
+import Image1 from '../assets/images/logo4.png';
+import Image2 from '../assets/images/POS.png';
 
 
 
@@ -176,7 +176,7 @@ export const LoginPage = () => {
 
         <div className="relative z-10 text-white text-center">
           <img
-            src={Image2} // Replace with your actual product image
+            src={Image2}
             alt="ADINO POS Device"
             className="max-w-md mx-auto w-full h-auto rounded-xl shadow-2xl transform scale-105"
           />
