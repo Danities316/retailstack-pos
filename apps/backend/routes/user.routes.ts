@@ -2,8 +2,7 @@ import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { checkRole } from '../middleware/role.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
-import crypto from 'crypto';
-import { hashPassword } from '../services/password.service';
+import { generateToken } from '../src/utils/token.util';
 import dotenv from 'dotenv';
 
 
@@ -81,9 +80,8 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
     }
 
     // If user doesn't exist, proceed with invitation
-    const setupToken = crypto.randomBytes(32).toString('hex');
+    const { token: setupToken, hashed: hashedToken } = generateToken()
     const setupTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
-    const hashedToken = crypto.createHash('sha256').update(setupToken).digest('hex');
 
     const user = await prisma.user.create({
       data: {
@@ -105,7 +103,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       return;
     }
 
-    const setupLink = `${process.env.BASE_URL}/api/users/setup-account?token=${setupToken}`;
+    const setupLink = `${process.env.BASE_URL}/api/auth/setup-account?token=${setupToken}`;
     console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
 
     res.status(201).json({ message: 'Invitation sent successfully.', user: user });
@@ -115,71 +113,8 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   }
 });
 
-// POST /api/users/setup-account - Setup account with token
-router.post('/setup-account', async (req: any, res: any) => {
-  const { token, password } = req.body;
-
-  if (!token || !password) {
-    res.status(400).json({
-      error: 'Token and password are required.'
-    });
-    return;
-  }
-
-  try {
-    // Hash the token to match the stored hash
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    // Find user with this token
-    const user = await prisma.user.findFirst({
-      where: {
-        setupToken: hashedToken,
-        setupTokenExpires: {
-          gt: new Date() // Token hasn't expired
-        }
-      }
-    });
-
-    if (!user) {
-      res.status(400).json({
-        error: 'Invalid or expired setup token.'
-      });
-      return;
-    }
-
-    // Hash the new password
-    const hashedPassword = await hashPassword(password);
-
-    // Update user details
-    const updatedUser = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        setupToken: null, // Clear the setup token
-        setupTokenExpires: null // Clear the expiration
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        phoneNumber: true
-      }
-    });
-
-    res.json({
-      message: 'Account setup completed successfully.',
-      user: updatedUser
-    });
-
-  } catch (error: any) {
-    console.error('Setup account error:', error);
-    res.status(500).json({
-      error: 'Failed to setup account.',
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+// NOTE: Setup account endpoints have been consolidated to /api/auth/setup-account
+// See auth.routes.ts for POST /setup-account and GET /setup-account/:token
 
 
 

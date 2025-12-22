@@ -18,6 +18,10 @@ router.post('/', async (req: AuthRequest, res: any) => {
     return res.status(400).json({ error: 'Tenant name, owner email, phoneNumber, and owner password are required.' });
   }
 
+  if (req.user?.role !== UserRole.SUPER_ADMIN) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to create a tenant.' });
+  }
+
   try {
     const hashedPassword = await hashPassword(ownerPassword);
 
@@ -32,7 +36,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
             password: hashedPassword,
             phoneNumber: phoneNumber,
             name: ownerName,
-            role: UserRole.OWNER, // The first user is the Owner 
+            role: "OWNER",
           },
         },
       },

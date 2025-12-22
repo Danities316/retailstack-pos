@@ -30,6 +30,8 @@ model Tenant {
   inventoryLogs InventoryLog[]
   storeSettings     StoreSettings?
   emailTemplates    EmailTemplate[]
+  loginHistory      LoginHistory[]
+  auditLogs         AuditLog[]
 }
 
 model User {
@@ -39,14 +41,23 @@ model User {
   phoneNumber  String
   name      String?
   role      UserRole @default(CASHIER) // Roles include Owner, Manager, Cashier 
+  isActive  Boolean  @default(true) // Account active/inactive status
+  failedLoginAttempts Int @default(0) // Count of failed login attempts
+  lockedUntil DateTime? // Account locked until this time (auto-unlock after 15 min)
+  lastLoginAt DateTime? // Timestamp of last successful login
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   shifts          Shift[]
+  refreshTokens   RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  loginHistory    LoginHistory[]
+  auditLogs       AuditLog[]
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   setupToken         String?   @unique
   setupTokenExpires  DateTime?
   @@index([tenantId])
+  @@index([lockedUntil])
 }
 
 model Product {
@@ -248,6 +259,72 @@ model Shift {
   sales           Sale[]      // All sales made during this shift
   @@index([tenantId])
   @@index([cashierId])
+}
+
+model RefreshToken {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash       String   // SHA256 hash of the refresh token
+  expiresAt       DateTime
+  revoked         Boolean  @default(false)
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash       String   // SHA256 hash of the reset token
+  expiresAt       DateTime
+  used            Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model LoginHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  success         Boolean  // true for successful login, false for failed attempts
+  reason          String?  // Failure reason: "INVALID_CREDENTIALS", "ACCOUNT_LOCKED", "ACCOUNT_INACTIVE", etc.
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  action          String   // e.g., "CREATE_USER", "UPDATE_PRODUCT", "DELETE_SALE", "CHANGE_PASSWORD"
+  resourceType    String   // e.g., "User", "Product", "Sale"
+  resourceId      String?  // ID of the affected resource
+  changes         Json?    // JSON object of field changes: { old: {...}, new: {...} }
+  description     String?
+  ip              String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 enum Provider {
