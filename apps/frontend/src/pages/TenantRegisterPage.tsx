@@ -67,24 +67,44 @@ export const TenantRegisterPage = () => {
     setLoading(true);
     setError(null);
     setSuccess(null);
+
     try {
-      // Mock API call based on your structure
-      console.log("Attempting registration with:", form);
+      // Prepare payload - keep keys consistent with backend expectations
+      const payload = {
+        tenantName: form.tenantName,
+        owner: {
+          ownerName: form.ownerName,
+          ownerEmail: form.ownerEmail,
+          ownerPassword: form.ownerPassword,
+          phoneNumber: form.phoneNumber,
+        },
+      };
+      console.log("Registration payload:", payload);
+      const url = `${baseURL}/superadmin/tenants`;
 
-      // In a real app, replace with:
-      // const response = await fetch(`${baseURL}/tenant/register`, { ... });
-      // const data = await response.json();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // Mock success response
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setSuccess("Registration successful! Redirecting to login...");
+      // Try to parse JSON body, but tolerate empty responses
+      const resBody = await res.json().catch(() => null);
+      console.log("Registration response:", resBody);
 
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+      if (!res.ok) {
+        const message = resBody?.message || res.statusText || "Registration failed";
+        throw new Error(message);
+      }
 
+      setSuccess(resBody?.message || "Registration successful! Redirecting to login...");
+
+      // Optionally, if backend returns tokens, you could set them here via AuthContext.
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err: any) {
-      setError(err.message || "Registration failed. Please check your details.");
+      setError(err?.message || "Registration failed. Please check your details.");
     } finally {
       setLoading(false);
     }

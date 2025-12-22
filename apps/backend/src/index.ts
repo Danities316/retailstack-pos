@@ -5,7 +5,7 @@ import { protect, AuthRequest } from '../middleware/auth.middleware';
 
 import superAdminRoutes from '../routes/superadmin.routes';
 import authRoutes from '../routes/auth.routes';
-// import tenantRoutes from '../routes/tenant.routes';
+import tenantRoutes from '../routes/tenant.routes';
 import userRoutes from '../routes/user.routes';
 import productRoutes from '../routes/product.routes';
 import saleRoutes from '../routes/sale.routes';
@@ -62,6 +62,7 @@ app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/auth', authRoutes);
 // --- Protected Routes ---
 // All routes defined after this line require a valid JWT.
+app.use('/api/tenant', protect, tenantRoutes);
 app.use('/api/products', protect, productRoutes);
 app.use('/api/sales', protect, saleRoutes);
 app.use('/api/shifts', protect, shiftRoutes);
