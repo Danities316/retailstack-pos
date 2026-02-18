@@ -42,10 +42,15 @@ const navItems: NavItem[] = [
 ]
 
 export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose, isCollapsed, toggleCollapse }) => {
-  const { user, setToken } = useAuth()
+  const { user, logout, isLoggingOut } = useAuth()
   const { theme } = useTheme()
   const location = useLocation()
   const isDark = theme.mode === 'dark'
+
+  const handleLogout = async () => {
+    onMobileClose()
+    await logout()
+  }
 
   const getInitial = (): string => user?.email?.charAt(0).toUpperCase() || 'R'
   const hasPermission = (item: NavItem): boolean => !item.roles || item.roles.includes(user?.role || '')
@@ -107,16 +112,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onMobileClose, i
       {/* Footer/Logout */}
       <div className="mt-auto px-4 pb-6">
         <button
-          onClick={() => {
-            setToken(null);
-            onMobileClose();
-          }}
+          onClick={handleLogout}
+          disabled={isLoggingOut}
           className={`flex items-center gap-x-3 w-full px-3 py-3 rounded-lg transition-colors
-      text-gray-500 hover:bg-red-50 hover:text-red-600 font-medium
+      text-gray-500 hover:bg-red-50 hover:text-red-600 font-medium disabled:opacity-50 disabled:cursor-not-allowed
       ${isCollapsed ? 'justify-center px-0' : ''}`}
         >
           <LogOut className="w-6 h-6" />
-          {!isCollapsed && <span>Logout</span>}
+          {!isCollapsed && <span>{isLoggingOut ? 'Signing out...' : 'Logout'}</span>}
         </button>
       </div>
       {/* <div className="mt-auto px-4 pb-6">

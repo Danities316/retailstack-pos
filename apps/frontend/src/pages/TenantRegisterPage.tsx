@@ -68,43 +68,50 @@ export const TenantRegisterPage = () => {
     setError(null);
     setSuccess(null);
 
+    // Validation
+    if (!form.tenantName || !form.ownerName || !form.ownerEmail || !form.ownerPassword) {
+      setError('All fields are required.');
+      setLoading(false);
+      return;
+    }
+
+    if (form.ownerPassword.length < 8) {
+      setError('Password must be at least 8 characters.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Prepare payload - keep keys consistent with backend expectations
+      // Use the new /auth/onboard endpoint (public, rate-limited)
       const payload = {
         tenantName: form.tenantName,
-        owner: {
-          ownerName: form.ownerName,
-          ownerEmail: form.ownerEmail,
-          ownerPassword: form.ownerPassword,
-          phoneNumber: form.phoneNumber,
-        },
+        ownerName: form.ownerName,
+        ownerEmail: form.ownerEmail,
+        ownerPassword: form.ownerPassword,
+        phoneNumber: form.phoneNumber,
       };
-      console.log("Registration payload:", payload);
-      const url = `${baseURL}/superadmin/tenants`;
 
+      const url = `${baseURL}/auth/onboard`;
       const res = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
-      // Try to parse JSON body, but tolerate empty responses
       const resBody = await res.json().catch(() => null);
-      console.log("Registration response:", resBody);
+      console.log('Onboarding response:', resBody);
 
       if (!res.ok) {
-        const message = resBody?.message || res.statusText || "Registration failed";
+        const message = resBody?.error || resBody?.message || 'Registration failed';
         throw new Error(message);
       }
 
-      setSuccess(resBody?.message || "Registration successful! Redirecting to login...");
-
-      // Optionally, if backend returns tokens, you could set them here via AuthContext.
-      setTimeout(() => navigate("/login"), 1500);
+      setSuccess('✓ Tenant created successfully! Check your email to verify your account.');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      setError(err?.message || "Registration failed. Please check your details.");
+      setError(err?.message || 'Registration failed. Please check your details.');
     } finally {
       setLoading(false);
     }

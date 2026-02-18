@@ -1,5 +1,6 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 import {
   ShoppingCart,
   BarChart3,
@@ -94,6 +95,46 @@ const pricingTiers = [
 ];
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate()
+  const { isAuthenticated, user } = useAuth()
+
+  // If already logged in, show message with dashboard button
+  if (isAuthenticated && user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center">
+          <div className="mb-6">
+            <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome back!</h1>
+          <p className="text-lg text-slate-600 mb-2">
+            <span className="font-semibold">{user.name || user.email}</span>
+          </p>
+          <p className="text-slate-500 mb-8">
+            You're logged in and ready to manage your POS system.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold mb-3 transition-colors"
+          >
+            Go to Dashboard
+          </button>
+          <button
+            onClick={() => {
+              // Logout will be handled by logout button in dashboard
+              navigate('/dashboard')
+            }}
+            className="w-full text-blue-600 hover:text-blue-700 font-medium py-2"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white text-slate-800">
       {/* Top nav */}
@@ -139,7 +180,7 @@ const HomePage: React.FC = () => {
 
                 {/* Primary Button */}
                 <Link
-                  to="/register"
+                  to="/onboard"
                   className="inline-flex items-center justify-center gap-3 px-8 py-3 rounded-xl bg-[#D4AF37] text-white font-semibold shadow-lg hover:bg-[#c2a032] transition duration-300 transform hover:scale-[1.02]"
                 >
                   Get Started
@@ -362,8 +403,9 @@ const HomePage: React.FC = () => {
 
                   {/* CTA Button */}
                   <div>
-                    <button
-                      className={`w-full px-6 py-3 rounded-xl font-bold transition duration-300 text-lg
+                    <Link
+                      to="/onboard"
+                      className={`w-full px-6 py-3 rounded-xl font-bold transition duration-300 text-lg inline-block text-center
                       ${isFeatured
                           ? 'bg-[#D4AF37] text-white hover:bg-[#c2a032] shadow-md' // Featured button
                           : 'border-2 border-gray-300 text-gray-700 hover:border-[#D4AF37] hover:text-[#D4AF37]' // Default button
@@ -371,7 +413,7 @@ const HomePage: React.FC = () => {
                     `}
                     >
                       {isFeatured ? 'Start Your Free Trial' : 'Choose Plan'}
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );

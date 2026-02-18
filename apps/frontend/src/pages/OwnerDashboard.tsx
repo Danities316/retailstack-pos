@@ -76,7 +76,7 @@ export const OwnerDashboard = () => {
                     <Button
                         style={{ backgroundColor: HERO_GOLD }}
                         className="flex items-center hover:bg-[#c2a032] text-white rounded-xl shadow-md transition-colors"
-                        onClick={() => navigate('/reporting/financial')}
+                        onClick={() => navigate('/dashboard/reports')}
                     >
                         <ArrowRight size={16} className="mr-1" /> View Financial Reports
                     </Button>

@@ -24,11 +24,16 @@ export const Header = ({
   isSidebarOpen,
   storeName,
 }: HeaderProps) => {
-  const { user } = useAuth()
+  const { user, logout, isLoggingOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const handleLogout = async () => {
+    setShowUserMenu(false)
+    await logout()
+  }
 
   const pathnames = location.pathname.split('/').filter(Boolean)
   const breadcrumbs = pathnames.map((name, index) => {
@@ -130,29 +135,27 @@ export const Header = ({
                 Settings
               </a>
               <button
-                onClick={() => {
-                  // Handle logout
-                  setShowUserMenu(false)
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign out
+                {isLoggingOut ? 'Signing out...' : 'Sign out'}
               </button>
 
               {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title={`Switch to ${theme.mode === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme.mode === 'light' ? (
-            <Moon className="w-5 h-5" />
-          ) : (
-            <Sun className="w-5 h-5" />
-          )}
-          
-        </button>
-       
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                title={`Switch to ${theme.mode === 'light' ? 'dark' : 'light'} mode`}
+              >
+                {theme.mode === 'light' ? (
+                  <Moon className="w-5 h-5" />
+                ) : (
+                  <Sun className="w-5 h-5" />
+                )}
+
+              </button>
+
             </div>
           )}
         </div>

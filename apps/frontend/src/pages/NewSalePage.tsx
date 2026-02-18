@@ -143,7 +143,7 @@ export const NewSalePage = () => {
         setLastSaleId(null);
         // Clear the success query parameter if it somehow persisted (good practice)
         if (location.search.includes('success=true')) {
-            navigate('/sales/new', { replace: true });
+            navigate('/dashboard/sales/new', { replace: true });
         }
     };
 

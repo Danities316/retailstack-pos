@@ -12,7 +12,8 @@ export const InviteUserPage = () => {
     email: '',
     name: '',
     role: 'CASHIER',
-    phoneNumber: ''
+    phoneNumber: '',
+    notificationMethod: 'email' // 'email' | 'sms' | 'both'
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,29 +24,36 @@ export const InviteUserPage = () => {
     setLoading(true)
     setError(null)
     setSuccess(null)
-    console.log("See submit details: ", JSON.stringify(formData))
+    console.log("Send invitation with details: ", JSON.stringify(formData))
 
     if (!formData.email || !formData.name || !formData.phoneNumber) {
-      setError('All fields are required')
+      setError('Email, name, and phone number are required')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.notificationMethod) {
+      setError('Please select a notification method')
       setLoading(false)
       return
     }
 
     try {
-      await apiClient.request('/users/invite', {
+      const response = await apiClient.request('/users/invite', {
         method: 'POST',
         body: JSON.stringify(formData)
       })
-      
-      setSuccess('User invitation sent successfully!')
+
+      setSuccess(`User invitation sent successfully via ${formData.notificationMethod}!`)
       setFormData({
         email: '',
         name: '',
-        role: '',
-        phoneNumber: ''
+        role: 'CASHIER',
+        phoneNumber: '',
+        notificationMethod: 'email'
       })
-      
-      setTimeout(() => navigate('/dashboard/users'), 2000)
+
+      setTimeout(() => navigate('/dashboard/users'), 2500)
     } catch (err: any) {
       setError(err.message || 'Failed to send invitation')
     } finally {
@@ -164,13 +172,69 @@ export const InviteUserPage = () => {
             </p>
           </div>
 
+          {/* Notification Method Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              How should we send the invitation? *
+            </label>
+            <div className="space-y-3">
+              <div className="flex items-center border border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50" onClick={() => handleInputChange('notificationMethod', 'email')}>
+                <input
+                  type="radio"
+                  id="method-email"
+                  name="notificationMethod"
+                  value="email"
+                  checked={formData.notificationMethod === 'email'}
+                  onChange={(e) => handleInputChange('notificationMethod', e.target.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="method-email" className="ml-3 cursor-pointer flex-1">
+                  <div className="font-medium text-gray-900">📧 Email Invitation</div>
+                  <p className="text-sm text-gray-600">Send setup link via email (user clicks link to set password)</p>
+                </label>
+              </div>
+
+              <div className="flex items-center border border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50" onClick={() => handleInputChange('notificationMethod', 'sms')}>
+                <input
+                  type="radio"
+                  id="method-sms"
+                  name="notificationMethod"
+                  value="sms"
+                  checked={formData.notificationMethod === 'sms'}
+                  onChange={(e) => handleInputChange('notificationMethod', e.target.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="method-sms" className="ml-3 cursor-pointer flex-1">
+                  <div className="font-medium text-gray-900">📱 SMS with Code</div>
+                  <p className="text-sm text-gray-600">Send 6-digit setup code via SMS (user enters code on setup page)</p>
+                </label>
+              </div>
+
+              <div className="flex items-center border border-gray-300 rounded-lg p-4 cursor-pointer hover:bg-gray-50" onClick={() => handleInputChange('notificationMethod', 'both')}>
+                <input
+                  type="radio"
+                  id="method-both"
+                  name="notificationMethod"
+                  value="both"
+                  checked={formData.notificationMethod === 'both'}
+                  onChange={(e) => handleInputChange('notificationMethod', e.target.value)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="method-both" className="ml-3 cursor-pointer flex-1">
+                  <div className="font-medium text-gray-900">📧📱 Both Methods</div>
+                  <p className="text-sm text-gray-600">Send both email link and SMS code for maximum flexibility</p>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-4 pt-4">
             <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-400 text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150">
               {loading ? 'Sending Invitation...' : 'Send Invitation'}
             </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => navigate('/dashboard/users')}
             >
               Cancel
@@ -183,10 +247,10 @@ export const InviteUserPage = () => {
       <div className="mt-6 bg-blue-50 p-4 rounded-lg">
         <h3 className="text-lg font-semibold mb-2">How It Works</h3>
         <ul className="text-sm text-gray-700 space-y-1">
-          <li>• An invitation email will be sent to the user's email address</li>
-          <li>• The user will receive a secure link to set up their account</li>
-          <li>• They'll be able to create their password and complete their profile</li>
-          <li>• The invitation expires after 24 hours for security</li>
+          <li>• <strong>Email:</strong> User receives link to set up password (recommended for managers)</li>
+          <li>• <strong>SMS:</strong> User receives 6-digit code to complete setup (recommended for remote staff)</li>
+          <li>• <strong>Both:</strong> Send both email and SMS for users who prefer flexibility</li>
+          <li>• All invitations expire after 24 hours for security</li>
         </ul>
       </div>
 
