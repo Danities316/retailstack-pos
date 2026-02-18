@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { Outlet } from 'react-router-dom'
+import Outbox from '@/components/Outbox'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -80,6 +81,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <div className="animate-in fade-in duration-200 h-full w-full">
                 {children}
                 <Outlet />
+                <Outbox />
           </div>
           </div>
       </main>

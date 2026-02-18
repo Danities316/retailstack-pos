@@ -41,7 +41,11 @@ export const SalesPage = () => {
         const salesData = await apiClient.request('/sales')
         setSales(salesData)
       } catch (error) {
-        setError('Failed to load sales')
+          const isOffline = !navigator.onLine
+          const errorMsg = isOffline 
+            ? 'You are offline. No cached sales data available. Go online to load sales.'
+            : 'Failed to load sales'
+          setError(errorMsg)
         console.error('Error loading sales:', error)
       } finally {
         setLoading(false)

@@ -17,4 +17,20 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        sw: path.resolve(__dirname, 'src/pwa/sw.ts'),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'sw') {
+            return 'sw.js'
+          }
+          return 'assets/[name]-[hash].js'
+        },
+      },
+    },
+  },
 })

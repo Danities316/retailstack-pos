@@ -44,6 +44,11 @@ export const CreateSalePage = () => {
           setProducts(data)
         }
       } catch (error) {
+        const isOffline = !navigator.onLine
+        const errorMsg = isOffline 
+          ? 'You are offline. Product list unavailable. You can still create sales by manually entering product IDs.'
+          : 'Failed to load products. You can still create sales by manually entering product IDs.'
+        setError(errorMsg)
         console.error('Failed to load products:', error)
       }
     }

@@ -214,7 +214,7 @@ export const CashierDashboard = () => {
                                 <Button
                                     className="w-full h-16 text-lg font-bold transition-transform transform hover:scale-[1.01]"
                                     style={{ backgroundColor: HERO_GOLD, color: 'white' }}
-                                    onClick={() => navigate('/new-sale')}
+                                    onClick={() => navigate('/dashboard/sales/new')}
                                 >
                                     <ShoppingCart className="w-6 h-6 mr-3" /> Start New Sale
                                 </Button>

@@ -3,17 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
-const baseURL = import.meta.env.VITE_API_BASE_URL
 import { Mail, Lock, LogIn, Loader2, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Image1 from '../assets/images/logo4.png';
 import Image2 from '../assets/images/POS.png';
+import { saveOfflineSession } from '@/lib/offlineAuth'
+const baseURL = import.meta.env.VITE_API_BASE_URL
 
 
 
 
 export const LoginPage = () => {
-  const { setToken } = useAuth()
+  const { setToken, isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
   const { slug } = useParams()
 
@@ -39,6 +40,19 @@ export const LoginPage = () => {
       // Extract access token and refresh token from response
       const { accessToken, refreshToken, user } = data.data || data
       setToken(accessToken || data.token, user || data.user, refreshToken)
+
+      // Save session for offline access (3 days)
+      const userData = user || data.user
+      if ((accessToken || data.token) && userData) {
+        saveOfflineSession({
+          token: accessToken || data.token,
+          userId: userData.id,
+          tenantId: userData.tenantId,
+          userName: userData.name || userData.email,
+          userEmail: userData.email,
+        })
+      }
+
       navigate('/dashboard')
     } catch (err: any) {
       setError(err.message)
@@ -49,8 +63,41 @@ export const LoginPage = () => {
   const HERO_GOLD = '#D4AF37';
   const currentStore = 'DANITIESTECH INTEGRATED SERVICES';
 
-
-
+  // Show message if already logged in
+  if (isAuthenticated && user) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-4">
+              <LogIn className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Already Logged In</h2>
+          <p className="text-gray-600 mb-6">
+            Welcome back, <span className="font-semibold">{user.name || user.email}</span>!
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            You are already logged into your account. Go to your dashboard to continue working.
+          </p>
+          <Button
+            onClick={() => navigate('/dashboard')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
+          >
+            Go to Dashboard
+          </Button>
+          <button
+            onClick={() => {
+              navigate('/')
+            }}
+            className="w-full text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col lg:flex-row">

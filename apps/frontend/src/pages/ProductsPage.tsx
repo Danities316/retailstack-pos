@@ -51,7 +51,11 @@ export const ProductsPage = () => {
           setCategories(categoriesData)
         }
       } catch (error) {
-        setError('Failed to load products')
+        const isOffline = !navigator.onLine
+        const errorMsg = isOffline 
+          ? 'You are offline. No cached products available. Go online to load products.'
+          : 'Failed to load products'
+        setError(errorMsg)
         console.error('Error loading products:', error)
       } finally {
         setLoading(false)
