@@ -8,30 +8,35 @@ import { hashPassword } from '../services/password.service';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Protect all routes in this file and ensure only SUPER_ADMIN can access them
+router.use(protect);
+router.use(checkRole([UserRole.SUPER_ADMIN]));
 
 // POST /api/superadmin/tenants - Create tenant (SUPER_ADMIN only)
 // Note: Public onboarding is available at POST /api/auth/onboard
 router.post('/tenants', async (req: AuthRequest, res: any) => {
+  console.log("Creating tenantssssssssssss:", req.body);
   const {
     tenantName,
-    owner,
+    phoneNumber,
+    logoUrl,
+    colorScheme,
+    loyverseApiKey,
+    ownerName,
+    ownerEmail,
+    ownerPassword,
+
   } = req.body;
 
-  // Support both flat and nested owner structure
-  const {
-    ownerName = owner?.ownerName,
-    ownerEmail = owner?.ownerEmail,
-    ownerPassword = owner?.ownerPassword,
-    phoneNumber = owner?.phoneNumber,
-  } = req.body.owner ? { ...req.body.owner } : req.body;
+  console.log("See req body: ", req.body)
 
-  // Validate required fields
-  if (!tenantName || !ownerEmail || !ownerPassword) {
+  if (!tenantName || !phoneNumber || !ownerEmail || !ownerPassword) {
     res.status(400).json({
-      message: 'Tenant Name, Owner Email, and Owner Password are required.',
+      error: 'Tenant Name, Tenant Phone Number, Owner Email, and Owner Password are required.'
     });
     return;
   }
+
 
   try {
     const hashedPassword = await hashPassword(ownerPassword);
@@ -40,6 +45,9 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
       data: {
         name: tenantName,
         phoneNumber,
+        logoUrl,
+        colorScheme,
+        loyverseApiKey,
         users: {
           create: {
             email: ownerEmail,
@@ -74,31 +82,7 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
 });
 
 // Protect all routes in this file and ensure only SUPER_ADMIN can access them
-router.use(protect);
 router.use(checkRole([UserRole.SUPER_ADMIN]));
-
-// GET /api/superadmin/tenants - List all tenants with their users
-router.get('/tenants', async (req, res) => {
-  const tenants = await prisma.tenant.findMany({
-    where: { users: { some: { role: UserRole.OWNER } } },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      phoneNumber: true,
-      createdAt: true,
-      users: {
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          phoneNumber: true,
-        }
-      }
-    }
-  })
-  res.json(tenants)
-})
 
 // GET /api/superadmin/tenants/:id - Get a single tenant's details
 router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
@@ -128,6 +112,28 @@ router.put('/tenants/:id', async (req, res) => {
   res.json(updatedTenant);
 });
 
+// GET /api/superadmin/tenants - List all tenants with their users
+router.get('/tenants', async (req, res) => {
+  const tenants = await prisma.tenant.findMany({
+    where: { users: { some: { role: UserRole.OWNER } } },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      phoneNumber: true,
+      createdAt: true,
+      users: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          phoneNumber: true,
+        }
+      }
+    }
+  })
+  res.json(tenants)
+})
 
 // DELETE /api/superadmin/tenants/:id - Delete a tenant by id
 router.delete('/tenants/:id', async (req: AuthRequest, res) => {
