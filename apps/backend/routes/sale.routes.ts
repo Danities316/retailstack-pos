@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient, UserRole, Prisma } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { checkRole } from '../middleware/role.middleware';
 import { any } from 'zod';
@@ -26,6 +26,8 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
   let activeShift = null;
 
+  const idempotencyKeyHeader = req.headers['idempotency-key'] as string | undefined;
+
   if (cashierRole === 'CASHIER') {
     // Only CASHIERs are REQUIRED to have an active shift
     activeShift = await prisma.shift.findFirst({
@@ -47,42 +49,106 @@ router.post('/', async (req: AuthRequest, res: any) => {
   }
 
   try {
-    const sale = await prisma.$transaction(async (tx) => {
-      let totalAmount = 0;
-      const saleItemsData = [];
+    // If no idempotency key provided, behave as before
+    if (!idempotencyKeyHeader) {
+      const sale = await prisma.$transaction(async (tx) => {
+        let totalAmount = 0;
+        const saleItemsData: any[] = [];
 
-      for (const item of items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId, tenantId },
-        });
+        for (const item of items) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+          });
 
-        if (!product) {
-          throw new Error(`Product not found: ${item.productId}`);
+          if (!product || product.tenantId !== tenantId) {
+            throw new Error(`Product not found: ${item.productId}`);
+          }
+
+          if (product.stock < item.quantity) {
+            throw new Error(`Stockout: Only ${product.stock} units of ${product.productName} available.`);
+          }
+
+          const itemPrice = product.sellingPrice;
+          totalAmount = Number(totalAmount) + (Number(itemPrice) * Number(item.quantity));
+
+          saleItemsData.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: itemPrice,
+          });
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
         }
 
-        // Stock check (Reliability)
+        const newSale = await tx.sale.create({
+          data: {
+            tenantId,
+            userId: cashierId,
+            shiftId: activeShift ? activeShift.id : null,
+            totalAmount,
+            paymentMethod,
+            items: { createMany: { data: saleItemsData } },
+          },
+          include: { items: true },
+        });
+
+        return newSale;
+      });
+
+      return res.status(201).json(sale);
+    }
+
+    // Idempotency flow: try to create an idempotency record first to claim the key
+    const key = idempotencyKeyHeader;
+
+    const result = await prisma.$transaction(async (tx) => {
+      try {
+        await tx.idempotencyKey.create({
+          data: {
+            key,
+            tenantId,
+            userId: cashierId,
+            status: 'IN_PROGRESS',
+          },
+        });
+      } catch (err: any) {
+        // If key already exists, return existing sale if available
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+          const existing = await tx.idempotencyKey.findUnique({ where: { key } });
+          if (existing && existing.saleId) {
+            const existingSale = await tx.sale.findUnique({ where: { id: existing.saleId } });
+            return { alreadyProcessed: true, sale: existingSale };
+          }
+          // Key exists but not yet linked to a sale -> indicate in-progress
+          return { alreadyProcessed: true, sale: null };
+        }
+        throw err;
+      }
+
+      // Proceed to create sale while owning the idempotency key
+      let totalAmount = 0;
+      const saleItemsData: any[] = [];
+
+      for (const item of items) {
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        if (!product || product.tenantId !== tenantId) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
         if (product.stock < item.quantity) {
           throw new Error(`Stockout: Only ${product.stock} units of ${product.productName} available.`);
         }
 
-        // Use the product's current price (security: prevent client-side manipulation)
         const itemPrice = product.sellingPrice;
         totalAmount = Number(totalAmount) + (Number(itemPrice) * Number(item.quantity));
 
-        saleItemsData.push({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: itemPrice, // Store the price at time of sale
-        });
+        saleItemsData.push({ productId: item.productId, quantity: item.quantity, price: itemPrice });
 
-        // 2. Decrement inventory (Critical for transaction integrity)
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
+        await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
       }
 
-      // 3. Create the Sale record
       const newSale = await tx.sale.create({
         data: {
           tenantId,
@@ -90,24 +156,36 @@ router.post('/', async (req: AuthRequest, res: any) => {
           shiftId: activeShift ? activeShift.id : null,
           totalAmount,
           paymentMethod,
-          items: {
-            createMany: {
-              data: saleItemsData,
-            },
-          },
+          items: { createMany: { data: saleItemsData } },
         },
         include: { items: true },
       });
 
-      return newSale;
+      // Link idempotency record to the created sale and store serialized response
+      await tx.idempotencyKey.update({
+        where: { key },
+        data: {
+          saleId: newSale.id,
+          status: 'COMPLETED',
+          response: newSale as any,
+        },
+      });
+
+      return { alreadyProcessed: false, sale: newSale };
     });
 
-    res.status(201).json(sale);
+    if (result.alreadyProcessed) {
+      if (result.sale) {
+        return res.status(200).json(result.sale);
+      }
+      return res.status(202).json({ message: 'Request is already being processed' });
+    }
+
+    return res.status(201).json(result.sale);
 
   } catch (error: any) {
     console.error('Sale creation failed:', error);
-    // Error Handling: Use empathetic, human-readable feedback (Clarity)
-    const message = error.message.includes('Stockout') ? error.message : 'Transaction failed due to an unknown error.';
+    const message = error.message && error.message.includes('Stockout') ? error.message : 'Transaction failed due to an unknown error.';
     res.status(400).json({ error: message });
   }
 });

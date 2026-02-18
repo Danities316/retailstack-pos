@@ -6,231 +6,260 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model Tenant {
-  id          String   @id @default(cuid())
-  name        String
-  phoneNumber  String
-  logoUrl     String?  // For white-labeling 
-  colorScheme String?  // For white-labeling 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  loyverseApiKey String?
-  transactions Transaction[]
-  tenantPaymentAccount TenantPaymentAccount[] 
-  users    User[]
-  products Product[]
-  sales    Sale[]
-  Shifts   Shift[]
-  categories Category[]
-  inventoryLogs InventoryLog[]
-  storeSettings     StoreSettings?
-  emailTemplates    EmailTemplate[]
-  loginHistory      LoginHistory[]
-  auditLogs         AuditLog[]
+  id                   String                 @id @default(cuid())
+  name                 String
+  phoneNumber          String
+  logoUrl              String? // For white-labeling 
+  colorScheme          String? // For white-labeling 
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  loyverseApiKey       String?
+  transactions         Transaction[]
+  tenantPaymentAccount TenantPaymentAccount[]
+  users                User[]
+  products             Product[]
+  sales                Sale[]
+  Shifts               Shift[]
+  categories           Category[]
+  inventoryLogs        InventoryLog[]
+  storeSettings        StoreSettings?
+  emailTemplates       EmailTemplate[]
+  loginHistory         LoginHistory[]
+  auditLogs            AuditLog[]
+  idempotencyKeys      IdempotencyKey[]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  phoneNumber  String
-  name      String?
-  role      UserRole @default(CASHIER) // Roles include Owner, Manager, Cashier 
-  isActive  Boolean  @default(true) // Account active/inactive status
-  failedLoginAttempts Int @default(0) // Count of failed login attempts
-  lockedUntil DateTime? // Account locked until this time (auto-unlock after 15 min)
-  lastLoginAt DateTime? // Timestamp of last successful login
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  shifts          Shift[]
-  refreshTokens   RefreshToken[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String
+  phoneNumber         String
+  name                String?
+  phoneVerified       Boolean              @default(false)
+  phoneVerifiedAt     DateTime?
+  role                UserRole             @default(CASHIER) // Roles include Owner, Manager, Cashier 
+  isActive            Boolean              @default(true) // Account active/inactive status
+  failedLoginAttempts Int                  @default(0) // Count of failed login attempts
+  lockedUntil         DateTime? // Account locked until this time (auto-unlock after 15 min)
+  lastLoginAt         DateTime? // Timestamp of last successful login
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  shifts              Shift[]
+  refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
-  loginHistory    LoginHistory[]
-  auditLogs       AuditLog[]
-  tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  setupToken         String?   @unique
-  setupTokenExpires  DateTime?
+  otpTokens           OtpToken[]
+  loginHistory        LoginHistory[]
+  auditLogs           AuditLog[]
+  tenantId            String?
+  tenant              Tenant?              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  setupToken          String?              @unique
+  setupTokenExpires   DateTime?
+  idempotencyKeys     IdempotencyKey[]
+
   @@index([tenantId])
   @@index([lockedUntil])
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  productName        String @default("products")
-  productImage        String @default("strimgs")
-  productColor        String @default("yellow")
-  productDescription        String  @default("helooo")
-  costPrice       Decimal @default(0.0)
-  sellingPrice       Decimal @default(0.0)
-  quantity       Int      @default(0)
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  barcode     String?  @unique
-  sku         String?
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  productName        String   @default("products")
+  productImage       String   @default("strimgs")
+  productColor       String   @default("yellow")
+  productDescription String   @default("helooo")
+  costPrice          Decimal  @default(0.0)
+  sellingPrice       Decimal  @default(0.0)
+  quantity           Int      @default(0)
+  stock              Int      @default(0)
+  createdAt          DateTime @default(now())
+  barcode            String?  @unique
+  sku                String?
+  updatedAt          DateTime @updatedAt
 
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  saleItems SaleItem[]
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  saleItems     SaleItem[]
   inventoryLogs InventoryLog[]
 
   categoryId String? // Optional, a product might not have a category
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete:SetNull) // If category is deleted, set this field to null
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull) // If category is deleted, set this field to null
 
+  @@unique([sku, tenantId])
   @@index([productName])
   @@index([tenantId])
   @@index([categoryId])
-  @@unique([sku, tenantId])
 }
 
 model Sale {
-  id          String     @id @default(cuid())
-  totalAmount Decimal
-  paymentMethod String
-  taxRate     Decimal    @default(0.0) // e.g., 0.075 for 7.5%
-  taxAmount   Decimal    @default(0.0) // calculated: subtotal * taxRate
-  subtotal    Decimal    @default(0.0) // before tax
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime @updatedAt
-  tenantId    String
-  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  items       SaleItem[]
-  userId      String
-  inventoryLogs InventoryLog[]
-  shiftId         String?   
-  shift           Shift?    @relation(fields: [shiftId], references: [id])
+  id              String           @id @default(cuid())
+  totalAmount     Decimal
+  paymentMethod   String
+  taxRate         Decimal          @default(0.0) // e.g., 0.075 for 7.5%
+  taxAmount       Decimal          @default(0.0) // calculated: subtotal * taxRate
+  subtotal        Decimal          @default(0.0) // before tax
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
+  items           SaleItem[]
+  userId          String?
+  inventoryLogs   InventoryLog[]
+  shiftId         String?
+  shift           Shift?           @relation(fields: [shiftId], references: [id])
+  idempotencyKeys IdempotencyKey[]
+
   @@index([shiftId])
   @@index([tenantId])
 }
 
+model IdempotencyKey {
+  key       String   @id
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  saleId    String?
+  sale      Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  status    String   @default("PENDING")
+  response  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
 model SaleItem {
-  id        String  @id @default(cuid())
-  quantity  Int
-  price     Decimal
+  id       String  @id @default(cuid())
+  quantity Int
+  price    Decimal
 
   saleId    String
-  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
-  updatedAt   DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  updatedAt DateTime @updatedAt
+
   @@index([saleId])
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  categoryName      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parentId String? // Optional: A category can be a top-level one
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete:NoAction)
-  children Category[] @relation("CategoryHierarchy")
-  products Product[]
+  id           String     @id @default(cuid())
+  categoryName String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentId     String? // Optional: A category can be a top-level one
+  parent       Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: NoAction)
+  children     Category[] @relation("CategoryHierarchy")
+  products     Product[]
 
   @@index([tenantId])
   @@index([parentId])
 }
 
 model InventoryLog {
-  id              String   @id @default(cuid())
-  change          Int      // The amount the stock changed by (e.g., -2 or +50)
-  newStockLevel   Int      // The stock level of the product *after* the change
-  reason          String   // e.g., "SALE", "STOCK_IN", "RETURN", "DAMAGE"
-  notes           String?  // Optional notes for manual adjustments
-  createdAt       DateTime @default(now())
+  id            String   @id @default(cuid())
+  change        Int // The amount the stock changed by (e.g., -2 or +50)
+  newStockLevel Int // The stock level of the product *after* the change
+  reason        String // e.g., "SALE", "STOCK_IN", "RETURN", "DAMAGE"
+  notes         String? // Optional notes for manual adjustments
+  createdAt     DateTime @default(now())
 
   // Relations
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete:Cascade)
-  
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   // Optional link to the sale that triggered this log
-  saleId          String?
-  sale            Sale?    @relation(fields: [saleId], references: [id], onDelete:SetNull)
-  updatedAt   DateTime @updatedAt
+  saleId    String?
+  sale      Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  updatedAt DateTime @updatedAt
+
   @@index([tenantId])
   @@index([productId])
   @@index([saleId])
 }
+
 model Transaction {
-  id                String   @id @default(uuid())
+  id                String            @id @default(uuid())
   tenantId          String
   saleId            String
-  provider          Provider @default(STRIPE)
+  provider          Provider          @default(STRIPE)
   providerPaymentId String
-  amount            Int      // stored in cents
+  amount            Int // stored in cents
   currency          String
   status            TransactionStatus @default(PENDING)
   paymentMethod     String
   metadata          Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
-  sale              Sale     @relation(fields: [saleId], references: [id])
-  tenant            Tenant   @relation(fields: [tenantId], references: [id])
-  refunds           Refund[]
+  sale    Sale     @relation(fields: [saleId], references: [id])
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  refunds Refund[]
 }
 
 model Refund {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   transactionId    String
-  amount           Int      // stored in cents
+  amount           Int // stored in cents
   providerRefundId String
   reason           String?
   status           RefundStatus @default(PENDING)
-  createdAt        DateTime @default(now())
+  createdAt        DateTime     @default(now())
 
-  transaction      Transaction @relation(fields: [transactionId], references: [id])
+  transaction Transaction @relation(fields: [transactionId], references: [id])
 }
 
 model StoreSettings {
-  id                String   @id @default(uuid())
-  tenantId          String   @unique
-  storeName         String
-  storeAddress      String?
-  storePhone        String?
-  storeTaxId        String?
-  operatingHoursStart String?  // e.g., "09:00"
-  operatingHoursEnd String?    // e.g., "18:00"
-  businessType      String?    // e.g., "retail", "f&b", "pharmacy"
-  currency          String   @default("USD")
-  language          String   @default("en")
-  dateFormat        String   @default("MM/DD/YYYY")
-  timeFormat        String   @default("HH:mm")
-  numberFormat      String   @default("en-US") // locale
-  logoUrl           String?
-  receiptHeader     String?
-  receiptFooter     String?
-  theme             String   @default("light") // "light" or "dark"
-  offlineModeEnabled Boolean @default(true)
-  autoSyncInterval  Int      @default(300) // seconds
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  tenantId            String   @unique
+  storeName           String
+  storeAddress        String?
+  storePhone          String?
+  storeTaxId          String?
+  operatingHoursStart String? // e.g., "09:00"
+  operatingHoursEnd   String? // e.g., "18:00"
+  businessType        String? // e.g., "retail", "f&b", "pharmacy"
+  currency            String   @default("USD")
+  language            String   @default("en")
+  dateFormat          String   @default("MM/DD/YYYY")
+  timeFormat          String   @default("HH:mm")
+  numberFormat        String   @default("en-US") // locale
+  logoUrl             String?
+  receiptHeader       String?
+  receiptFooter       String?
+  theme               String   @default("light") // "light" or "dark"
+  offlineModeEnabled  Boolean  @default(true)
+  autoSyncInterval    Int      @default(300) // seconds
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 }
 
 model EmailTemplate {
-  id                String   @id @default(uuid())
-  tenantId          String
-  templateType      String   // "receipt", "refund", "invoice"
-  subject           String
-  htmlContent       String   // HTML email template
-  variables         String?  // JSON array of variable names
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id           String   @id @default(uuid())
+  tenantId     String
+  templateType String // "receipt", "refund", "invoice"
+  subject      String
+  htmlContent  String // HTML email template
+  variables    String? // JSON array of variable names
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
   @@unique([tenantId, templateType])
 }
 
@@ -240,66 +269,83 @@ model TenantPaymentAccount {
   onboardingStatus String
   createdAt        DateTime @default(now())
 
-  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 }
 
 model Shift {
-  id              String      @id @default(cuid())
-  tenantId        String      // Mandatory for multi-tenancy
-  cashierId       String      // The user who clocked in
-  startTime       DateTime    @default(now())
-  endTime         DateTime?   // Nullable: indicates an active shift
-  startFloat      Decimal     @default(0.00) // Starting cash amount (float)
-  endFloat        Decimal?    // Closing cash count (for manager reconciliation)
-  reconciliation  Json?       // Stores reconciliation details (variance, manager notes, etc.)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  tenant          Tenant      @relation(fields: [tenantId], references: [id])
-  cashier         User        @relation(fields: [cashierId], references: [id])
-  sales           Sale[]      // All sales made during this shift
+  id             String    @id @default(cuid())
+  tenantId       String // Mandatory for multi-tenancy
+  cashierId      String // The user who clocked in
+  startTime      DateTime  @default(now())
+  endTime        DateTime? // Nullable: indicates an active shift
+  startFloat     Decimal   @default(0.00) // Starting cash amount (float)
+  endFloat       Decimal? // Closing cash count (for manager reconciliation)
+  reconciliation Json? // Stores reconciliation details (variance, manager notes, etc.)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  cashier        User      @relation(fields: [cashierId], references: [id])
+  sales          Sale[] // All sales made during this shift
+
   @@index([tenantId])
   @@index([cashierId])
 }
 
 model RefreshToken {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash       String   // SHA256 hash of the refresh token
-  expiresAt       DateTime
-  revoked         Boolean  @default(false)
-  ip              String?
-  userAgent       String?
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String // SHA256 hash of the refresh token
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model PasswordResetToken {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash       String   // SHA256 hash of the reset token
-  expiresAt       DateTime
-  used            Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String // SHA256 hash of the reset token
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([expiresAt])
 }
 
+model OtpToken {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneNumber String
+  codeHash    String // SHA256 hash of numeric OTP code
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([expiresAt])
+}
+
 model LoginHistory {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  success         Boolean  // true for successful login, false for failed attempts
-  reason          String?  // Failure reason: "INVALID_CREDENTIALS", "ACCOUNT_LOCKED", "ACCOUNT_INACTIVE", etc.
-  ip              String?
-  userAgent       String?
-  createdAt       DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  success   Boolean // true for successful login, false for failed attempts
+  reason    String? // Failure reason: "INVALID_CREDENTIALS", "ACCOUNT_LOCKED", "ACCOUNT_INACTIVE", etc.
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([tenantId])
@@ -307,19 +353,19 @@ model LoginHistory {
 }
 
 model AuditLog {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  action          String   // e.g., "CREATE_USER", "UPDATE_PRODUCT", "DELETE_SALE", "CHANGE_PASSWORD"
-  resourceType    String   // e.g., "User", "Product", "Sale"
-  resourceId      String?  // ID of the affected resource
-  changes         Json?    // JSON object of field changes: { old: {...}, new: {...} }
-  description     String?
-  ip              String?
-  userAgent       String?
-  createdAt       DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  action       String // e.g., "CREATE_USER", "UPDATE_PRODUCT", "DELETE_SALE", "CHANGE_PASSWORD"
+  resourceType String // e.g., "User", "Product", "Sale"
+  resourceId   String? // ID of the affected resource
+  changes      Json? // JSON object of field changes: { old: {...}, new: {...} }
+  description  String?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
 
   @@index([userId])
   @@index([tenantId])
@@ -351,4 +397,3 @@ enum UserRole {
   MANAGER
   CASHIER
 }
-

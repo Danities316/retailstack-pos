@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { PrismaClient, UserRole } from '@prisma/client';
 import { checkRole } from '../middleware/role.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { generateToken } from '../src/utils/token.util';
+import { generateToken, generateNumericOtp } from '../src/utils/token.util';
+import { NotificationService } from '../src/services/notification.service';
+import { hashToken } from '../src/utils/token.util';
 import dotenv from 'dotenv';
 
 
@@ -16,11 +18,18 @@ dotenv.config();
 router.use(checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]));
 
 router.post('/invite', async (req: AuthRequest, res: any) => {
-  const { email, name, role, phoneNumber } = req.body;
+  const { email, name, role, phoneNumber, notificationMethod = 'email' } = req.body;
   const inviter = req.user!;
 
+  // Validate required fields
   if (!email || !role || !phoneNumber) {
     res.status(400).json({ error: 'Email, role, and phone number are required.' });
+    return;
+  }
+
+  // Validate notificationMethod
+  if (!['email', 'sms', 'both'].includes(notificationMethod)) {
+    res.status(400).json({ error: 'notificationMethod must be "email", "sms", or "both".' });
     return;
   }
 
@@ -31,13 +40,11 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
   }
 
   try {
-
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
     if (existingUser) {
-
       if (existingUser.email === email) {
         // If roles are the same, return error
         if (existingUser.role === role) {
@@ -79,10 +86,21 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
       }
     }
 
-    // If user doesn't exist, proceed with invitation
-    const { token: setupToken, hashed: hashedToken } = generateToken()
-    const setupTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    // Generate setupToken for email invitations
+    const { token: setupToken, hashed: hashedToken } = generateToken();
+    const setupTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+    // Generate 6-digit OTP code for SMS invitations (generate but don't create yet)
+    let otpCode = null;
+    let hashedOtpCode = null;
+
+    if (['sms', 'both'].includes(notificationMethod)) {
+      const { code, hashed } = generateNumericOtp(6);
+      otpCode = code;
+      hashedOtpCode = hashed;
+    }
+
+    // Create user first
     const user = await prisma.user.create({
       data: {
         email,
@@ -98,18 +116,106 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
 
     if (!user) {
       res.status(500).json({
-        error: 'There us an error creating User'
+        error: 'There was an error creating user'
       });
       return;
     }
 
-    const setupLink = `${process.env.BASE_URL}/api/auth/setup-account?token=${setupToken}`;
-    console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
+    // Now create OTP token for SMS if needed
+    if (['sms', 'both'].includes(notificationMethod)) {
+      if (!hashedOtpCode) {
+        res.status(500).json({
+          error: 'Failed to generate OTP code'
+        });
+        return;
+      }
 
-    res.status(201).json({ message: 'Invitation sent successfully.', user: user });
+      await prisma.otpToken.create({
+        data: {
+          userId: user.id,
+          phoneNumber,
+          codeHash: hashedOtpCode,
+          expiresAt: setupTokenExpires,
+        },
+      });
+    }
+
+    // Prepare notification details
+    const notificationSummary: { userId: string; email: string; method: any; sentAt: Date; emailSent?: boolean; smsSent?: boolean; codeLength?: number } = {
+      userId: user.id,
+      email: user.email,
+      method: notificationMethod,
+      sentAt: new Date()
+    };
+
+    // Send email invitation if requested
+    if (['email', 'both'].includes(notificationMethod)) {
+      const setupLink = `${process.env.BASE_URL}/auth/setup-account?token=${setupToken}`;
+      console.log(`--DEV ONLY-- Email setup link for ${email}: ${setupLink}`);
+
+      // Send invitation email asynchronously (don't block response)
+      NotificationService.sendEmail({
+        to: email,
+        subject: `You're invited to RetailStack POS`,
+        html: `
+          <h2>Welcome to RetailStack POS!</h2>
+          <p>Hi ${name || email},</p>
+          <p>You've been invited to join the team. Click the link below to complete your account setup:</p>
+          <a href="${setupLink}" style="display: inline-block; padding: 10px 20px; background: #D4AF37; color: white; text-decoration: none; border-radius: 5px;">
+            Complete Setup
+          </a>
+          <p>Or copy this link: ${setupLink}</p>
+          <p>This link expires in 24 hours.</p>
+        `
+      }).catch(err => {
+        console.warn(`Failed to send invitation email to ${email}: ${err}`);
+      });
+
+      notificationSummary.emailSent = true;
+    }
+
+    // Send SMS invitation if requested
+    if (['sms', 'both'].includes(notificationMethod)) {
+      const setupPageUrl = `${process.env.BASE_URL}/setup`;
+      const smsMessage = `Your RetailStack POS setup code: ${otpCode}. Visit ${setupPageUrl} and enter this code to complete your account setup.`;
+      console.log(`--DEV ONLY-- SMS sent to ${phoneNumber} with code: ${otpCode}`);
+
+      // Send SMS asynchronously (don't block response)
+      NotificationService.sendSMS({
+        phoneNumber,
+        message: smsMessage
+      }).catch(err => {
+        console.warn(`Failed to send invitation SMS to ${phoneNumber}: ${err}`);
+      });
+
+      notificationSummary.smsSent = true;
+      notificationSummary.codeLength = 6;
+    }
+
+    // Return success response
+    res.status(201).json({
+      message: `Invitation sent successfully via ${notificationMethod}.`,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        phoneNumber: user.phoneNumber,
+        createdAt: user.createdAt
+      },
+      notification: notificationSummary,
+      devInfo: process.env.NODE_ENV === 'development' ? {
+        setupLink: ['email', 'both'].includes(notificationMethod) ? `${process.env.BASE_URL}/auth/setup-account?token=${setupToken}` : undefined,
+        smsCode: ['sms', 'both'].includes(notificationMethod) ? otpCode : undefined
+      } : undefined
+    });
+
   } catch (error: any) {
-    console.log("Failed to invite user.: ", error)
-    res.status(500).json({ error: 'Failed to invite user.', message: error instanceof Error ? error.message : String(error) });
+    console.error("Failed to invite user: ", error);
+    res.status(500).json({
+      error: 'Failed to invite user.',
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

@@ -3,18 +3,43 @@ import { PrismaClient, UserRole } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { comparePassword } from '../services/password.service';
 import { hashPassword } from '../services/password.service';
-import { hashToken, generateToken } from '../src/utils/token.util';
+import { hashToken, generateToken, generateNumericOtp } from '../src/utils/token.util';
 import rateLimit from 'express-rate-limit';
 import { AuthRequest, protect } from '../middleware/auth.middleware';
 import { AuditService } from '../src/services/audit.service';
+import { NotificationService } from '../src/services/notification.service';
 
 const router = Router();
 const prisma = new PrismaClient();
 
+// ============================================================================
+// SECURITY CONSTANTS (MVP Configuration)
+// ============================================================================
+const AUTH_CONFIG = {
+  // Rate limiting
+  RATE_LIMIT_WINDOW_MS: 15 * 60 * 1000,      // 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: 5,                 // 5 requests per window
+
+  // Token expiry
+  ACCESS_TOKEN_EXPIRY: '1h',                  // Short-lived
+  REFRESH_TOKEN_EXPIRY: '7d',                 // Longer-lived
+  RESET_TOKEN_EXPIRY_MS: 60 * 60 * 1000,     // 1 hour
+  VERIFICATION_TOKEN_EXPIRY_MS: 24 * 60 * 60 * 1000, // 24 hours
+  OTP_EXPIRY_MS: 10 * 60 * 1000,             // 10 minutes
+
+  // Security thresholds
+  MAX_FAILED_LOGIN_ATTEMPTS: 5,
+  LOCKOUT_DURATION_MS: 15 * 60 * 1000,       // 15 minutes
+
+  // Validation
+  MIN_PASSWORD_LENGTH: 8,
+  OTP_LENGTH: 6,
+};
+
 // Rate limiter for public endpoints (onboarding, login attempts)
 const publicLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window
+  windowMs: AUTH_CONFIG.RATE_LIMIT_WINDOW_MS,
+  max: AUTH_CONFIG.RATE_LIMIT_MAX_REQUESTS,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -60,6 +85,20 @@ router.post('/login', publicLimiter, async (req: any, res: any) => {
   if (!user || !(await comparePassword(password, user.password))) {
     // Log failed attempt if user exists
     if (user) {
+      // Increment failed login attempts and lock account if threshold reached
+      const newFailedAttempts = user.failedLoginAttempts + 1;
+      const isLocked = newFailedAttempts >= AUTH_CONFIG.MAX_FAILED_LOGIN_ATTEMPTS;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: newFailedAttempts,
+          ...(isLocked && {
+            lockedUntil: new Date(Date.now() + AUTH_CONFIG.LOCKOUT_DURATION_MS)
+          })
+        }
+      });
+
       await AuditService.logLogin({
         userId: user.id,
         tenantId: user.tenantId || undefined,
@@ -331,47 +370,6 @@ router.post('/logout', protect, async (req: AuthRequest, res: any) => {
   }
 });
 
-// POST /api/auth/unlock-account - Admin endpoint to unlock a locked user account
-// Note: User accounts auto-unlock after 15 minutes, this is for immediate admin intervention
-router.post('/unlock-account', protect, async (req: AuthRequest, res: any) => {
-  const { userId } = req.body;
-
-  // Only OWNER and MANAGER can unlock
-  if (req.user!.role !== 'OWNER' && req.user!.role !== 'MANAGER') {
-    return res.status(403).json({
-      error: 'Only managers and owners can unlock accounts.'
-    });
-  }
-
-  if (!userId) {
-    return res.status(400).json({ error: 'userId is required.' });
-  }
-
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    // Unlock account
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-      },
-    });
-
-    res.json({
-      message: `Account for ${user.email} has been unlocked.`,
-      user: { id: user.id, email: user.email }
-    });
-  } catch (error: any) {
-    console.error('Unlock account error:', error);
-    res.status(500).json({ error: 'Failed to unlock account.' });
-  }
-});
-
 // POST /api/auth/forgot-password - Initiate password reset (rate-limited)
 router.post('/forgot-password', publicLimiter, async (req: any, res: any) => {
   const { email } = req.body;
@@ -390,7 +388,7 @@ router.post('/forgot-password', publicLimiter, async (req: any, res: any) => {
 
     // Generate reset token
     const { token: resetToken, hashed: hashedResetToken } = generateToken();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + AUTH_CONFIG.RESET_TOKEN_EXPIRY_MS); // 1 hour
 
     // Create password reset token
     await prisma.passwordResetToken.create({
@@ -409,6 +407,15 @@ router.post('/forgot-password', publicLimiter, async (req: any, res: any) => {
       message: 'If an account with this email exists, a password reset link has been sent.',
       resetLink: process.env.NODE_ENV === 'development' ? resetLink : undefined
     });
+
+    // Send password reset email asynchronously (don't block response)
+    NotificationService.sendPasswordResetEmail(
+      email,
+      user.name || email.split('@')[0],
+      resetLink
+    ).catch(err => {
+      console.warn(`Failed to send password reset email to ${email}: ${err}`);
+    });
   } catch (error: any) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Failed to initiate password reset.' });
@@ -416,44 +423,44 @@ router.post('/forgot-password', publicLimiter, async (req: any, res: any) => {
 });
 
 // GET /api/auth/verify-reset-token/:token - Verify reset token is valid
-router.get('/verify-reset-token/:token', async (req: any, res: any) => {
-  const { token } = req.params;
+// router.get('/verify-reset-token/:token', async (req: any, res: any) => {
+//   const { token } = req.params;
 
-  try {
-    const hashedToken = hashToken(token);
+//   try {
+//     const hashedToken = hashToken(token);
 
-    const resetToken = await prisma.passwordResetToken.findFirst({
-      where: {
-        tokenHash: hashedToken,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-      select: {
-        id: true,
-        user: {
-          select: { id: true, email: true }
-        }
-      }
-    });
+//     const resetToken = await prisma.passwordResetToken.findFirst({
+//       where: {
+//         tokenHash: hashedToken,
+//         used: false,
+//         expiresAt: { gt: new Date() },
+//       },
+//       select: {
+//         id: true,
+//         user: {
+//           select: { id: true, email: true }
+//         }
+//       }
+//     });
 
-    if (!resetToken) {
-      return res.status(400).json({
-        error: 'Invalid or expired password reset token.'
-      });
-    }
+//     if (!resetToken) {
+//       return res.status(400).json({
+//         error: 'Invalid or expired password reset token.'
+//       });
+//     }
 
-    res.json({
-      message: 'Reset token is valid.',
-      user: { email: resetToken.user.email }
-    });
-  } catch (error: any) {
-    console.error('Verify reset token error:', error);
-    res.status(500).json({
-      error: 'Failed to verify reset token.',
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-});
+//     res.json({
+//       message: 'Reset token is valid.',
+//       user: { email: resetToken.user.email }
+//     });
+//   } catch (error: any) {
+//     console.error('Verify reset token error:', error);
+//     res.status(500).json({
+//       error: 'Failed to verify reset token.',
+//       message: error instanceof Error ? error.message : String(error)
+//     });
+//   }
+// });
 
 // POST /api/auth/reset-password - Complete password reset
 router.post('/reset-password', async (req: any, res: any) => {
@@ -471,9 +478,9 @@ router.post('/reset-password', async (req: any, res: any) => {
     });
   }
 
-  if (password.length < 8) {
+  if (password.length < AUTH_CONFIG.MIN_PASSWORD_LENGTH) {
     return res.status(400).json({
-      error: 'Password must be at least 8 characters long.'
+      error: `Password must be at least ${AUTH_CONFIG.MIN_PASSWORD_LENGTH} characters long.`
     });
   }
 
@@ -521,6 +528,21 @@ router.post('/reset-password', async (req: any, res: any) => {
     res.json({
       message: 'Password reset successful. Please log in with your new password.'
     });
+
+    // Send password reset confirmation email asynchronously
+    const user = await prisma.user.findUnique({
+      where: { id: resetToken.userId },
+      select: { email: true, name: true }
+    });
+    if (user) {
+      NotificationService.sendPasswordResetConfirmation(
+        user.email,
+        user.name || user.email.split('@')[0],
+        `${process.env.BASE_URL || 'https://retailstack.com'}/login`
+      ).catch(err => {
+        console.warn(`Failed to send password reset confirmation to ${user.email}: ${err}`);
+      });
+    }
   } catch (error: any) {
     console.error('Reset password error:', error);
     res.status(500).json({
@@ -532,6 +554,7 @@ router.post('/reset-password', async (req: any, res: any) => {
 
 // POST /api/auth/onboard - Public onboarding endpoint (rate-limited)
 router.post('/onboard', publicLimiter, async (req: any, res: any) => {
+
   const { email, password, tenantName, phoneNumber, ownerName } = req.body;
 
   // Validation
@@ -541,9 +564,9 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
     });
   }
 
-  if (password.length < 8) {
+  if (password.length < AUTH_CONFIG.MIN_PASSWORD_LENGTH) {
     return res.status(400).json({
-      error: 'Password must be at least 8 characters long.'
+      error: `Password must be at least ${AUTH_CONFIG.MIN_PASSWORD_LENGTH} characters long.`
     });
   }
 
@@ -565,7 +588,7 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
 
     // Generate email verification token
     const { token: verificationToken, hashed: hashedVerificationToken } = generateToken();
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const verificationExpires = new Date(Date.now() + AUTH_CONFIG.VERIFICATION_TOKEN_EXPIRY_MS); // 24 hours
 
     // Hash password for storage
     const hashedPassword = await hashPassword(password);
@@ -605,8 +628,48 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
     res.status(201).json({
       message: 'Onboarding successful. Please verify your email to activate your account.',
       tenant,
-      verificationLink: process.env.NODE_ENV === 'development' ? verificationLink : undefined
+      verificationLink: verificationLink
     });
+
+    // Send verification email
+    // const emailResult = await NotificationService.sendOnboardingEmail(
+    //   email,
+    //   tenantName,
+    //   ownerName || email.split('@')[0],
+    //   verificationLink
+    // );
+    // if (!emailResult.success) {
+    //   console.warn(`Failed to send onboarding email to ${email}: ${emailResult.error}`);
+    // }
+
+    // Create OTP for phone verification and send via SMS (if phone provided)
+    if (phoneNumber) {
+      try {
+        // generate numeric OTP and its hash
+        const { code, hashed } = generateNumericOtp(AUTH_CONFIG.OTP_LENGTH);
+        const otpExpires = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MS); // 10 minutes
+
+        // createdUser is the first user returned by the tenant creation
+        const createdUser = tenant.users && tenant.users.length > 0 ? tenant.users[0] : null;
+        if (createdUser) {
+          await prisma.otpToken.create({
+            data: {
+              userId: createdUser.id,
+              phoneNumber,
+              codeHash: hashed,
+              expiresAt: otpExpires,
+            },
+          });
+
+          const smsResult = await NotificationService.sendOnboardingSMS(phoneNumber, Number(code));
+          if (!smsResult.success) {
+            console.warn(`Failed to send onboarding OTP SMS to ${phoneNumber}: ${smsResult.error}`);
+          }
+        }
+      } catch (err: any) {
+        console.warn('Failed to create/send OTP for onboarding:', err?.message || err);
+      }
+    }
 
   } catch (error: any) {
     console.error('Onboarding error:', error);
@@ -620,8 +683,78 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
   }
 });
 
+// POST /api/auth/verify-otp - Verify phone OTP for onboarding or phone verification
+router.post('/verify-otp', async (req: any, res: any) => {
+  const { userId, otp } = req.body;
+
+  if (!userId || !otp) {
+    return res.status(400).json({ error: 'userId and otp are required.' });
+  }
+
+  try {
+    const codeHash = hashToken(String(otp));
+    const OTP_ATTEMPT_THRESHOLD = 5;
+
+    // Find OTP record by userId first
+    const otpRecord = await prisma.otpToken.findFirst({
+      where: {
+        userId,
+        used: false,
+        expiresAt: { gt: new Date() }
+      }
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'Invalid or expired OTP.' });
+    }
+
+    // Check if code matches
+    if (otpRecord.codeHash !== codeHash) {
+      // Code doesn't match - increment attempts in transaction
+      const newAttempts = (otpRecord.attempts || 0) + 1;
+
+      await prisma.$transaction([
+        prisma.otpToken.update({
+          where: { id: otpRecord.id },
+          data: {
+            attempts: newAttempts,
+            ...(newAttempts >= OTP_ATTEMPT_THRESHOLD && { used: true })
+          }
+        })
+      ]);
+
+      if (newAttempts >= OTP_ATTEMPT_THRESHOLD) {
+        return res.status(400).json({ error: 'Too many failed OTP attempts. Please request a new code.' });
+      }
+      return res.status(400).json({ error: 'Invalid OTP. Please try again.' });
+    }
+
+    // Code matches - mark as used and verify phone (transaction)
+    await prisma.$transaction([
+      prisma.otpToken.update({ where: { id: otpRecord.id }, data: { used: true } }),
+      prisma.user.update({ where: { id: userId }, data: { phoneVerified: true, phoneVerifiedAt: new Date() } }),
+    ]);
+
+    // Log phone verification
+    const userRec = await prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } });
+    await AuditService.logAction({
+      userId,
+      tenantId: userRec?.tenantId || 'unknown',
+      action: 'PHONE_VERIFIED',
+      resourceType: 'User',
+      resourceId: userId,
+      description: 'User verified phone via OTP',
+    });
+
+    res.json({ message: 'Phone number verified successfully.' });
+  } catch (error: any) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP.' });
+  }
+});
+
 // GET /api/auth/verify-email/:token - Verify email address (public endpoint)
-router.get('/verify-email/:token', async (req: any, res: any) => {
+router.get('/user/verify-email/:token', async (req: any, res: any) => {
   const { token } = req.params;
 
   try {
@@ -662,6 +795,19 @@ router.get('/verify-email/:token', async (req: any, res: any) => {
       user: { email: user.email, tenantId: user.tenantId }
     });
 
+    // Send verification confirmation email asynchronously
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: user.tenantId || '' }
+    });
+    if (tenant) {
+      NotificationService.sendEmailVerificationConfirm(
+        user.email,
+        tenant.name,
+        `${process.env.BASE_URL || 'https://retailstack.com'}/login`
+      ).catch(err => {
+        console.warn(`Failed to send verification confirmation to ${user.email}: ${err}`);
+      });
+    }
   } catch (error: any) {
     console.error('Email verification error:', error);
     res.status(500).json({
@@ -832,6 +978,122 @@ router.get('/tenant/suspicious-activity', protect, async (req: any, res: any) =>
   } catch (error: any) {
     console.error('Error retrieving suspicious activity:', error);
     res.status(500).json({ error: 'Failed to retrieve suspicious activity.' });
+  }
+});
+
+// POST /api/auth/setup-account-sms - Setup account using SMS code (for users invited via SMS)
+router.post('/setup-account-sms', async (req: any, res: any) => {
+  const { email, code, password } = req.body;
+
+  if (!email || !code || !password) {
+    res.status(400).json({ error: 'Email, code, and password are required.' });
+    return;
+  }
+
+  try {
+    const OTP_ATTEMPT_THRESHOLD = 5;
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found.' });
+      return;
+    }
+
+    // Check if setup is still valid (within 24 hours)
+    if (!user.setupTokenExpires || new Date() > user.setupTokenExpires) {
+      res.status(400).json({ error: 'Setup code has expired. Please request a new invitation.' });
+      return;
+    }
+
+    // Find OTP record by userId
+    const otpRecord = await prisma.otpToken.findFirst({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'Invalid or expired setup code.' });
+    }
+
+    // Verify the code matches against database
+    const codeHash = hashToken(code);
+    if (otpRecord.codeHash !== codeHash) {
+      // Code doesn't match - increment attempts in transaction
+      const newAttempts = (otpRecord.attempts || 0) + 1;
+
+      await prisma.$transaction([
+        prisma.otpToken.update({
+          where: { id: otpRecord.id },
+          data: {
+            attempts: newAttempts,
+            ...(newAttempts >= OTP_ATTEMPT_THRESHOLD && { used: true })
+          }
+        })
+      ]);
+
+      if (newAttempts >= OTP_ATTEMPT_THRESHOLD) {
+        return res.status(400).json({ error: 'Too many failed setup attempts. Please request a new invitation.' });
+      }
+      return res.status(400).json({ error: 'Invalid setup code. Please try again.' });
+    }
+
+    // Code matches - mark OTP as used and proceed with password setup
+    // Hash the new password
+    const hashedPassword = await hashPassword(password);
+
+
+    // Update user with new password, clear setup token, and mark OTP as used (transaction)
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      // Mark OTP as used
+      await tx.otpToken.update({
+        where: { id: otpRecord.id },
+        data: { used: true }
+      });
+
+      // Update user account setup
+      return tx.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          setupToken: null,
+          setupTokenExpires: null
+        }
+      });
+    });
+
+    // Log successful account setup
+    await AuditService.logAction({
+      userId: user.id,
+      tenantId: user.tenantId || 'unknown',
+      action: 'ACCOUNT_SETUP',
+      resourceType: 'user',
+      description: 'User completed account setup via SMS invitation',
+      ip: req.ip || 'unknown',
+      userAgent: req.get('user-agent') || 'unknown'
+    });
+
+    res.json({
+      message: 'Account setup completed successfully.',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role
+      }
+    });
+  } catch (error: any) {
+    console.error('Error setting up account via SMS:', error);
+    res.status(500).json({
+      error: 'Failed to setup account.',
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

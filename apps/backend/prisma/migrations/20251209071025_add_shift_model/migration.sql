@@ -6,7 +6,11 @@
 */
 -- AlterTable
 ALTER TABLE "Sale" ADD COLUMN     "shiftId" TEXT,
-ADD COLUMN     "userId" TEXT NOT NULL;
+ADD COLUMN     "userId" TEXT;
+
+UPDATE "Sale" SET "userId" = 'cmi0g9g7d0001tcs47b5rdbsk' WHERE "userId" IS NULL;
+
+ALTER TABLE "Sale" ALTER COLUMN "userId" SET NOT NULL;
 
 -- CreateTable
 CREATE TABLE "Shift" (

@@ -17,6 +17,7 @@ import managerDashboardRoutes from '../routes/manager.routes';
 import settingsRoutes from '../routes/setting.routes';
 import reportsRoutes from '../routes/reports.routes';
 import shiftRoutes from '../routes/shift.routes';
+import syncRoutes from '../routes/sync';
 
 
 dotenv.config();
@@ -73,7 +74,8 @@ app.use('/api/dashboard', protect, dashboardRoutes);
 app.use('/api/dashboard/payment', protect, stripePaymentRoutes);
 app.use('/api/dashboard/manager', protect, managerDashboardRoutes);
 app.use('/api/settings', protect, settingsRoutes);
-app.use('/api/reports', protect, reportsRoutes)
+app.use('/api/reports', protect, reportsRoutes);
+app.use('/api/sync', protect, syncRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend server running on port:${PORT}`);
