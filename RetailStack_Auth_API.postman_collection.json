@@ -1,0 +1,543 @@
+{
+    "info": {
+        "name": "RetailStack POS - Authentication API",
+        "description": "Complete authentication testing suite for RetailStack POS MVP",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Public Endpoints",
+            "item": [
+                {
+                    "name": "1.1 Onboard (Create Account)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@retailstack.com\",\n  \"password\": \"SecurePass123!\",\n  \"tenantName\": \"My Retail Store\",\n  \"phoneNumber\": \"+1234567890\",\n  \"ownerName\": \"John Doe\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/onboard",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "onboard"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.2 Verify Email",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/verify-email/PASTE_TOKEN_HERE",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "verify-email",
+                                "PASTE_TOKEN_HERE"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.3 Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@retailstack.com\",\n  \"password\": \"SecurePass123!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/login",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.4 Refresh Token",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/refresh",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "refresh"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.5 Forgot Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@retailstack.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/forgot-password",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "forgot-password"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.6 Verify Reset Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/verify-reset-token/PASTE_RESET_TOKEN_HERE",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "verify-reset-token",
+                                "PASTE_RESET_TOKEN_HERE"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.7 Reset Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"token\": \"PASTE_RESET_TOKEN_HERE\",\n  \"password\": \"NewSecurePass456!\",\n  \"confirmPassword\": \"NewSecurePass456!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/reset-password",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "reset-password"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.8 Get Setup Account Token (Verify)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{BASE_URL}}/setup-account/PASTE_SETUP_TOKEN_HERE",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "setup-account",
+                                "PASTE_SETUP_TOKEN_HERE"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.9 Complete Account Setup",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"token\": \"PASTE_SETUP_TOKEN_HERE\",\n  \"password\": \"SetupPass123!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/setup-account",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "setup-account"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "1.10 Verify OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"{{USER_ID}}\",\n  \"otp\": \"123456\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/verify-otp",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "verify-otp"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Protected Endpoints (Require Auth)",
+            "item": [
+                {
+                    "name": "2.1 Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refreshToken\": \"{{REFRESH_TOKEN}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/logout",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2.2 Unlock Account (Admin Only)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"userId\": \"USER_ID_TO_UNLOCK\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/unlock-account",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "unlock-account"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2.3 Login History (Current User)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/login-history?limit=50",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "login-history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2.4 Tenant Login History (Manager/Owner)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/tenant/login-history?limit=100",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "tenant",
+                                "login-history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2.5 Tenant Audit Logs (Manager/Owner)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/tenant/audit-logs?limit=100&action=USER_CREATED",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "tenant",
+                                "audit-logs"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                },
+                                {
+                                    "key": "action",
+                                    "value": "USER_CREATED"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2.6 Suspicious Activity (Manager/Owner)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{ACCESS_TOKEN}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/tenant/suspicious-activity?minutes=30",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "tenant",
+                                "suspicious-activity"
+                            ],
+                            "query": [
+                                {
+                                    "key": "minutes",
+                                    "value": "30"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Test Scenarios",
+            "item": [
+                {
+                    "name": "Scenario 1: Full Happy Path",
+                    "description": "Test complete flow: Onboard → Verify Email → Login → Refresh → Logout",
+                    "item": [
+                        {
+                            "name": "Step 1: Onboard",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\"email\": \"test@example.com\", \"password\": \"TestPass123!\", \"tenantName\": \"Test Store\", \"phoneNumber\": \"+1234567890\", \"ownerName\": \"Test Owner\"}"
+                                },
+                                "url": {
+                                    "raw": "{{BASE_URL}}/onboard",
+                                    "host": [
+                                        "{{BASE_URL}}"
+                                    ],
+                                    "path": [
+                                        "onboard"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Scenario 2: Rate Limiting Test",
+                    "description": "Send 6 requests in quick succession to /login endpoint",
+                    "item": [
+                        {
+                            "name": "Request 1 (Should Pass)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\"email\": \"owner@retailstack.com\", \"password\": \"SecurePass123!\"}"
+                                },
+                                "url": {
+                                    "raw": "{{BASE_URL}}/login",
+                                    "host": [
+                                        "{{BASE_URL}}"
+                                    ],
+                                    "path": [
+                                        "login"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Scenario 3: Account Lockout Test",
+                    "description": "Attempt login with wrong password 5+ times",
+                    "item": [
+                        {
+                            "name": "Wrong Password Attempt 1",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\"email\": \"owner@retailstack.com\", \"password\": \"WrongPassword\"}"
+                                },
+                                "url": {
+                                    "raw": "{{BASE_URL}}/login",
+                                    "host": [
+                                        "{{BASE_URL}}"
+                                    ],
+                                    "path": [
+                                        "login"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "http://localhost:3000/api/auth",
+            "type": "string"
+        },
+        {
+            "key": "ACCESS_TOKEN",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "REFRESH_TOKEN",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "USER_ID",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "TENANT_ID",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}
