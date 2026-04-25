@@ -86,6 +86,7 @@ class ApiClient {
     }
 
     try {
+      console.log(`API Request: ${endpoint}`, config)
       let response = await fetch(`${this.baseURL}${endpoint}`, config)
 
       // Handle 401 Unauthorized - attempt token refresh
@@ -113,12 +114,27 @@ class ApiClient {
           })
         })
       }
+      console.log(`API Request: ${endpoint}`, config, 'Response:', response)
 
       if (response.ok) {
         const data = await response.json()
         return data
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        // Try to parse error response to get detailed error info
+        let errorData: any = { status: response.status, statusText: response.statusText }
+        try {
+          const body = await response.json()
+          errorData = { ...errorData, ...body }
+        } catch {
+          // If response body is not JSON, just use status info
+        }
+
+        // Create error with all details
+        const error: any = new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+        error.code = errorData.code
+        error.status = response.status
+        error.details = errorData
+        throw error
       }
     } catch (error) {
       throw error
@@ -167,9 +183,21 @@ class ApiClient {
         body: JSON.stringify(saleData)
       })
     } catch (err: any) {
+      // Check if this is a business logic error that should NOT fall back to offline
+      // Business logic errors should be handled by the UI, not persisted offline
+      if (err.status === 402 || err.code === 'SHIFT_REQUIRED') {
+        // Re-throw shift-required errors so frontend can show the clock-in modal
+        throw err
+      }
+
+      if (err.status === 400 || err.status === 409 || err.status === 403) {
+        // Re-throw validation and auth errors - don't fallback to offline
+        throw err
+      }
+
       // Network or other failure -> fallback to offline outbox
-      console.warn('[Offline] Network request failed, attemping to persist to IndexedDB', err.message)
-      
+      console.warn('[Offline] Network request failed, attempting to persist to IndexedDB', err.message)
+
       try {
         // Lazy import to avoid pulling IDB logic into environments that don't have window/indexedDB
         const { openDatabase, putInStore } = await import('@/offline/db')
@@ -213,7 +241,7 @@ class ApiClient {
         // If offline persistence itself failed, log it and still return a local ack
         // so the UI does not show "failed to fetch" when the user is offline
         console.error('[Offline] Failed to persist sale to IndexedDB', persistErr)
-        
+
         // Generate a local ID anyway so the user knows the action was attempted
         const id = `local_sale_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
         return {
@@ -229,6 +257,15 @@ class ApiClient {
   // Dashboard stats methods
   async getDashboardStats(tenantId: string, token?: string) {
     return await this.request('/dashboard/quick-stats', {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'x-tenant-id': tenantId,
+      },
+    })
+  }
+
+  async getDailySummary(tenantId: string, token?: string) {
+    return await this.request('/dashboard/daily-summary', {
       headers: {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         'x-tenant-id': tenantId,
@@ -301,7 +338,15 @@ class ApiClient {
       },
     })
   }
-
+  // Manager & Owner Dashboard stats methods (Add this)
+  async getTopProducts(tenantId: string, token?: string, limit = 5) {
+    return await this.request(`/dashboard/top-products?limit=${limit}`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'x-tenant-id': tenantId,
+      },
+    })
+  }
   async uploadProducts(file: File, tenantId: string, token: string): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
@@ -327,6 +372,33 @@ class ApiClient {
       console.error("Upload error details:", error);
       throw new Error(error.report.errors[0].error || "Failed to upload products.");
     }
+  }
+
+  // HTTP helper methods for sync operations
+  async post(endpoint: string, data: any = {}) {
+    return await this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async get(endpoint: string) {
+    return await this.request(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  async put(endpoint: string, data: any = {}) {
+    return await this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint: string) {
+    return await this.request(endpoint, {
+      method: 'DELETE',
+    });
   }
 }
 

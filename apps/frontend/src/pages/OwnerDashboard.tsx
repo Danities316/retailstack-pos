@@ -2,167 +2,197 @@ import React, { useEffect, useState } from 'react'
 import { SalesSummary } from '../components/SalesSummary'
 import { SalesChart } from '../components/SalesChart'
 import { QuickStats } from '../components/QuickStats'
+import { DailySummary } from '../components/DailySummary'
+import { SummaryCards } from '../components/SummaryCards'
+import { QuickActions } from '../components/QuickActions'
+import { BusinessHealth } from '../components/BusinessHealth'
+import { TopProducts } from '../components/TopProducts'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { PlusIcon, ShoppingBag, ArrowRight, Loader2 } from 'lucide-react'
+import {
+  PlusIcon, ShoppingBag, ArrowRight, Loader2,
+  TrendingUp, Clock, RefreshCw,
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { apiClient } from '../lib/apiClient'
 
+const GOLD = '#D4AF37'
+
+// Greeting based on time of day — relevant for Nigerian business hours
+const getGreeting = (): string => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+// Nigerian date format
+const formatDate = (): string =>
+  new Date().toLocaleDateString('en-NG', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
 export const OwnerDashboard = () => {
+  const navigate = useNavigate()
+  const { user, token } = useAuth()
+  const [quickStats, setQuickStats] = useState<any>(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+  const [errorStats, setErrorStats] = useState<string | null>(null)
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
-    const navigate = useNavigate()
-    const { user, token } = useAuth()
-    const [quickStats, setQuickStats] = useState<any>(null)
-    const [loadingStats, setLoadingStats] = useState(true)
-    const [errorStats, setErrorStats] = useState<string | null>(null)
+  const fetchStats = async () => {
+    if (!user?.tenantId || !token) return
+    setLoadingStats(true)
+    setErrorStats(null)
+    try {
+      const data = await apiClient.getDashboardStats(user.tenantId, token)
+      setQuickStats(data)
+      setLastRefreshed(new Date())
+    } catch (err: any) {
+      setErrorStats(err.message || 'Error fetching stats')
+    } finally {
+      setLoadingStats(false)
+    }
+  }
 
-    // ... (useAuth, useState, useEffect for fetching stats remain the same)
-    // ... (mock data for topProducts remains the same)
-    useEffect(() => {
-        const fetchStats = async () => {
-            if (!user?.tenantId || !token) return
-            setLoadingStats(true)
-            setErrorStats(null)
-            try {
-                const data = await apiClient.getDashboardStats(user.tenantId, token)
-                setQuickStats(data)
-            } catch (err: any) {
-                setErrorStats(err.message || 'Error fetching stats')
-            } finally {
-                setLoadingStats(false)
-            }
-        }
-        fetchStats()
-    }, [user?.tenantId, token])
+  useEffect(() => { fetchStats() }, [user?.tenantId, token])
 
-    const topProducts = [
-        {
-            name: 'Coffee Mug',
-            sales: 12,
-            revenue: '₦144.00',
-        },
-        {
-            name: 'T-Shirt (Black)',
-            sales: 8,
-            revenue: '₦159.92',
-        },
-        {
-            name: 'Wireless Earbuds',
-            sales: 5,
-            revenue: '₦249.95',
-        },
-    ]
+  return (
+    <div className="space-y-6 p-4 md:p-0">
 
-    const HERO_GOLD = '#D4AF37';
-
-    // ... (fetchStats logic)
-
-    return (
-        <div className="space-y-8 p-4 md:p-0">
-            {/* Dashboard Header & CTA */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-4 border-b border-gray-100">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900">
-                        Welcome, <span style={{ color: HERO_GOLD }}>{user?.name || 'Owner'}!</span>
-                    </h1>
-                    <p className="text-base text-gray-500 mt-1">
-                        Comprehensive overview of your entire retail operation.
-                    </p>
-                </div>
-
-                {/* Quick Action Buttons (Owner focus is typically on big picture actions) */}
-                <div className="flex space-x-3 mt-4 md:mt-0">
-                    <Button
-                        style={{ backgroundColor: HERO_GOLD }}
-                        className="flex items-center hover:bg-[#c2a032] text-white rounded-xl shadow-md transition-colors"
-                        onClick={() => navigate('/dashboard/reports')}
-                    >
-                        <ArrowRight size={16} className="mr-1" /> View Financial Reports
-                    </Button>
-                </div>
-            </div>
-
-            {/* Quick Stats, Sales Chart, Top Products, Sales Summary - ALL REMAIN HERE */}
-            {/* ... (Existing QuickStats, SalesChart, TopProducts, SalesSummary components) ... */}
-
-
-            {/* Quick Stats Loader/Error */}
-            {loadingStats ? (
-                <div className="h-24 flex items-center justify-center text-gray-500 bg-white rounded-xl shadow-md">
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Loading stats...
-                </div>
-            ) : errorStats ? (
-                <div className="h-24 flex items-center justify-center text-red-500 bg-red-50 border border-red-200 rounded-xl shadow-md">{errorStats}</div>
-            ) : quickStats ? (
-                <QuickStats stats={quickStats} />
-            ) : null}
-
-            {/* Charts and Top Products Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* Sales Chart (2/3 width) */}
-                <div className="lg:col-span-2">
-                    {user?.tenantId && (
-                        <SalesChart tenantId={user.tenantId} token={token || undefined} />
-                    )}
-                </div>
-
-                {/* Top Selling Products Card (1/3 width) - Refactored for better UX */}
-                <div className="lg:col-span-1">
-                    <Card className="rounded-2xl shadow-xl border border-gray-100 h-full"> {/* Enhanced Card style */}
-                        <div className="p-6">
-
-                            {/* Header */}
-                            <div className="font-extrabold text-xl text-gray-900 mb-4 flex items-center justify-between">
-                                <span>Top Selling Products</span>
-                                <ShoppingBag className="w-5 h-5" style={{ color: HERO_GOLD }} /> {/* Brand color icon */}
-                            </div>
-                            <div className="border-b border-gray-200 -mx-6 mb-2"></div>
-
-                            {/* Product List */}
-                            {topProducts.map((product, index) => (
-                                <div
-                                    key={index}
-                                    className={`
-                                flex justify-between items-center
-                                ${index !== topProducts.length - 1 ? 'border-b border-gray-100' : ''}
-                                py-4 transition hover:bg-gray-50 -mx-6 px-6
-                              `}
-                                >
-                                    <div className='flex items-center'>
-                                        <span className='font-bold text-lg mr-3 text-gray-400'>{index + 1}.</span> {/* Rank */}
-                                        <div>
-                                            <div className="font-semibold text-gray-800 text-base">{product.name}</div>
-                                            <div className="text-sm text-gray-500">{product.sales} units sold</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="font-bold text-gray-900 text-lg">{product.revenue}</span>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* View All Button */}
-                            <div className="border-t border-gray-200 mt-2 pt-4 text-center -mx-6 px-6">
-                                <button
-                                    className="inline-flex items-center gap-2 font-semibold hover:underline focus:outline-none transition-colors"
-                                    style={{ color: HERO_GOLD }} // Applied brand color
-                                    onClick={() => navigate('/dashboard/products')}
-                                >
-                                    View All Products
-                                    <ArrowRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
-
-            {/* Sales Summary */}
-            {user?.tenantId && (
-                <SalesSummary tenantId={user.tenantId} token={token || undefined} />
-            )}
+      {/* ── Dashboard header ─────────────────────────────────────────────── */}
+      <div
+        style={{
+          background: `linear-gradient(135deg, #fffbeb 0%, #fef9c3 60%, #fff 100%)`,
+          border: `1px solid ${GOLD}33`,
+          borderRadius: 16,
+          padding: '24px 28px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+            <Clock size={11} style={{ display: 'inline', marginRight: 4 }} />
+            {formatDate()}
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+            {getGreeting()},{' '}
+            <span style={{ color: GOLD }}>{user?.name || 'Owner'}</span> 👋
+          </h1>
+          <p style={{ fontSize: 14, color: '#64748b', marginTop: 6 }}>
+            Here's your store performance overview for today.
+          </p>
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
+              fontSize: 11.5, color: '#92400e',
+            }}
+          >
+            <RefreshCw size={11} />
+            Last refreshed: {lastRefreshed.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}
+            <button
+              onClick={fetchStats}
+              style={{
+                background: GOLD + '22', border: `1px solid ${GOLD}44`,
+                color: '#92400e', borderRadius: 6, padding: '2px 8px',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer', marginLeft: 4,
+              }}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
-    )
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Button
+            style={{ background: GOLD, color: '#fff', borderRadius: 10, fontWeight: 700 }}
+            onClick={() => navigate('/dashboard/sales/new')}
+          >
+            <PlusIcon size={15} style={{ marginRight: 6 }} />
+            New Sale
+          </Button>
+          <Button
+            variant="outline"
+            style={{ borderColor: GOLD + '66', color: '#92400e', borderRadius: 10, fontWeight: 600 }}
+            onClick={() => navigate('/dashboard/reports')}
+          >
+            <TrendingUp size={15} style={{ marginRight: 6 }} />
+            View Reports
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Today Summary Cards ─────────────────────────────────────────── */}
+      <SummaryCards />
+
+      {/* ── Quick Actions ────────────────────────────────────────────────── */}
+      <QuickActions />
+
+      {/* ── Business Health ──────────────────────────────────────────────── */}
+      <BusinessHealth />
+
+      {/* ── Top Selling Products ─────────────────────────────────────────── */}
+      <TopProducts />
+
+      {/* ── KPI cards ───────────────────────────────────────────────────── */}
+      {loadingStats ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {[0, 1, 2, 3].map(i => (
+            <div
+              key={i}
+              style={{
+                height: 130, borderRadius: 16,
+                background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)',
+                backgroundSize: '200% 100%',
+                animation: 'shimmer 1.4s infinite',
+              }}
+            />
+          ))}
+          <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+        </div>
+      ) : errorStats ? (
+        <div
+          style={{
+            padding: '16px 20px', borderRadius: 12,
+            background: '#fef2f2', border: '1px solid #fecaca',
+            color: '#dc2626', fontSize: 14,
+          }}
+        >
+          ⚠️ {errorStats}
+        </div>
+      ) : quickStats ? (
+        <>
+          <QuickStats stats={quickStats} />
+          <div style={{ marginTop: 18 }}>
+            {/* <DailySummary /> */}
+          </div>
+        </>
+      ) : null}
+
+      {/* ── Charts ────────────────────────────────────────────────────────── */}
+      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-3">
+          {user?.tenantId && (
+            <SalesChart tenantId={user.tenantId} token={token || undefined} />
+          )}
+        </div>
+      </div> */}
+
+      {/* ── Recent Sales Summary ─────────────────────────────────────────── */}
+      {user?.tenantId && (
+        <SalesSummary tenantId={user.tenantId} token={token || undefined} />
+      )}
+    </div>
+  )
 }

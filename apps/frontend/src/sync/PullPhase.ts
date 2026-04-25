@@ -38,7 +38,7 @@ export async function executePullPhase(
 ): Promise<PullPhaseResult> {
     try {
         // 1. Fetch changes from server
-        const response = await apiClient.post('/api/sync/pull', {
+        const response = await apiClient.post('/sync/pull', {
             lastSyncTime: lastSyncTime || new Date(0).toISOString(),
         });
 

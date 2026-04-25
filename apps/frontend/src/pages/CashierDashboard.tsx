@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '../lib/apiClient';
+import { DailySummary } from '../components/DailySummary';
 // Assuming usePWAStatus is a custom hook you'll create for offline/sync status
 // import { usePWAStatus } from '@/context/PWAContext'; 
 
@@ -193,6 +194,8 @@ export const CashierDashboard = () => {
             <p className="text-base text-gray-500 mt-1">
                 Your dedicated interface for daily transactions and shift management.
             </p>
+
+            <DailySummary />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* ---------------------------------------------------- */}

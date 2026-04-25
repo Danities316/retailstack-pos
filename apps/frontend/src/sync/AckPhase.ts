@@ -36,7 +36,7 @@ export async function executeAckPhase(
     }
 
     try {
-        const response = await apiClient.post('/api/sync/ack', {
+        const response = await apiClient.post('/sync/ack', {
             idempotencyKeys,
         } as AckRequest);
 

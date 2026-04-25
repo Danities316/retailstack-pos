@@ -41,11 +41,11 @@ export const SalesPage = () => {
         const salesData = await apiClient.request('/sales')
         setSales(salesData)
       } catch (error) {
-          const isOffline = !navigator.onLine
-          const errorMsg = isOffline 
-            ? 'You are offline. No cached sales data available. Go online to load sales.'
-            : 'Failed to load sales'
-          setError(errorMsg)
+        const isOffline = !navigator.onLine
+        const errorMsg = isOffline
+          ? 'You are offline. No cached sales data available. Go online to load sales.'
+          : 'Failed to load sales'
+        setError(errorMsg)
         console.error('Error loading sales:', error)
       } finally {
         setLoading(false)
@@ -69,7 +69,7 @@ export const SalesPage = () => {
   }
 
   const filteredSales = sales.filter(sale => {
-    const matchesSearch = sale.items.some(item => 
+    const matchesSearch = sale.items.some(item =>
       item.product.productName.toLowerCase().includes(searchTerm.toLowerCase())
     )
     const matchesPayment = !filterPayment || sale.paymentMethod === filterPayment
@@ -97,7 +97,7 @@ export const SalesPage = () => {
     }, 0)
     return total
   }
- 
+
 
   if (loading) {
     return (
@@ -133,7 +133,7 @@ export const SalesPage = () => {
           <div>
             <p className="text-sm text-gray-600">Average Sale</p>
             <p className="text-2xl font-bold">
-            ₦{filteredSales.length > 0 ? (getTotalSales() / filteredSales.length).toFixed(2) : '0.00'}
+              ₦{filteredSales.length > 0 ? (getTotalSales() / filteredSales.length).toFixed(2) : '0.00'}
             </p>
           </div>
         </div>
@@ -203,16 +203,15 @@ export const SalesPage = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    sale.paymentMethod === 'CASH' ? 'bg-green-100 text-green-800' :
-                    sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-800' :
-                    'bg-purple-100 text-purple-800'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${sale.paymentMethod === 'CASH' ? 'bg-green-100 text-green-800' :
+                      sale.paymentMethod === 'CARD' ? 'bg-blue-100 text-blue-800' :
+                        'bg-purple-100 text-purple-800'
+                    }`}>
                     {sale.paymentMethod}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                ₦{safeNumber(sale.totalAmount).toFixed(2)}
+                  ₦{safeNumber(sale.totalAmount).toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex gap-2">

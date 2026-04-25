@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { initializeSyncQueue } from '@/offline/SyncQueue';
 
 // Load pending offline sales from IndexedDB into the sync queue on app boot
 async function initializeOfflineQueue() {
@@ -113,8 +114,16 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// createRoot(document.getElementById('root')).render(
+//   <StrictMode>
+//     <App />
+//   </StrictMode>,
+// )
+
+initializeSyncQueue().then(() => {
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+});

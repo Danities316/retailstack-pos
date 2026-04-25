@@ -32,6 +32,9 @@ export const ProductsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [categories, setCategories] = useState<Array<{ id: string; categoryName: string }>>([])
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
+  const [deleteFeedback, setDeleteFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const baseURL = import.meta.env.VITE_API_BASE_URL
   useEffect(() => {
     const loadData = async () => {
@@ -52,7 +55,7 @@ export const ProductsPage = () => {
         }
       } catch (error) {
         const isOffline = !navigator.onLine
-        const errorMsg = isOffline 
+        const errorMsg = isOffline
           ? 'You are offline. No cached products available. Go online to load products.'
           : 'Failed to load products'
         setError(errorMsg)
@@ -67,15 +70,50 @@ export const ProductsPage = () => {
     }
   }, [token])
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+  const handleDeleteClick = (product: Product) => {
+    setDeleteTarget(product)
+    setDeleteFeedback(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    setDeleteFeedback(null)
 
     try {
-      await apiClient.request(`/products/${productId}`, { method: 'DELETE' })
-      setProducts(products.filter(p => p.id !== productId))
-    } catch (error) {
+      // Use direct fetch because DELETE returns 204 No Content,
+      // which breaks apiClient.request's JSON parsing.
+      const response = await fetch(`${baseURL}/products/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || `Failed to delete product (HTTP ${response.status})`)
+      }
+
+      setProducts(prev => prev.filter(p => p.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      setDeleteFeedback({ type: 'success', message: 'Product deleted successfully.' })
+    } catch (error: any) {
       console.error('Failed to delete product:', error)
+      setDeleteFeedback({
+        type: 'error',
+        message:
+          typeof error?.message === 'string'
+            ? error.message
+            : 'Failed to delete product. Please try again.',
+      })
+    } finally {
+      setIsDeleting(false)
     }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteTarget(null)
   }
 
   const filteredProducts = products.filter(product => {
@@ -191,7 +229,7 @@ export const ProductsPage = () => {
                     size="sm"
                     variant="outline"
                     className="text-red-600"
-                    onClick={() => handleDelete(product.id)}
+                    onClick={() => handleDeleteClick(product)}
                   >
                     Delete
                   </Button>
@@ -205,6 +243,48 @@ export const ProductsPage = () => {
       {filteredProducts.length === 0 && !loading && (
         <div className="text-center py-12">
           <p className="text-gray-500">No products found</p>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+              Delete product
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold">{deleteTarget.productName}</span>? This action
+              will remove it from the catalog for this store.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline delete feedback toast */}
+      {deleteFeedback && (
+        <div
+          className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-md shadow-lg text-sm text-white ${deleteFeedback.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            }`}
+        >
+          {deleteFeedback.message}
         </div>
       )}
     </div>

@@ -50,6 +50,7 @@ export const TenantRegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [devVerificationLink, setDevVerificationLink] = useState<string | null>(null);
   // const baseURL = "http://localhost:3000/api"
   const baseURL = import.meta.env.VITE_API_BASE_URL
 
@@ -108,8 +109,20 @@ export const TenantRegisterPage = () => {
         throw new Error(message);
       }
 
+      // Store dev verification link if available (development mode)
+      if (resBody?.verificationLink) {
+        setDevVerificationLink(resBody.verificationLink);
+      }
+
       setSuccess('✓ Tenant created successfully! Check your email to verify your account.');
-      setTimeout(() => navigate('/login'), 2000);
+      // Redirect to verification page with email for resend capability
+      setTimeout(() => {
+        const params = new URLSearchParams({
+          email: form.ownerEmail,
+          ...(resBody?.verificationLink && { devLink: resBody.verificationLink })
+        });
+        navigate(`/verify-email?${params.toString()}`);
+      }, 2000);
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please check your details.');
     } finally {

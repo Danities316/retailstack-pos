@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { Header } from '@/components/Header'
 import { Outlet } from 'react-router-dom'
 import Outbox from '@/components/Outbox'
+import SyncStatus from '@/components/SyncStatus'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -52,7 +53,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         <Sidebar
           isMobileOpen={isMobileMenuOpen}
           onMobileClose={handleMobileMenuClose}
-          isCollapsed={isSidebarCollapsed} 
+          isCollapsed={isSidebarCollapsed}
           toggleCollapse={handleSidebarToggleCollapse}
         />
 
@@ -67,13 +68,18 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* <Header 
             onMobileMenuClick={handleMobileMenuToggle}
           /> */}
-        
-  <Header
-    toggleSidebar={toggleSidebar}
-    isSidebarOpen={isSidebarOpen}
-    storeName="Your Store"
-  />
-        
+
+          <Header
+            toggleSidebar={toggleSidebar}
+            isSidebarOpen={isSidebarOpen}
+            storeName="Danities Supermarket"
+          />
+
+          {/* Sync Status Bar */}
+          <div className="px-6 pt-4 pb-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <SyncStatus />
+          </div>
+
 
           {/* Page Content */}
           <main className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -82,10 +88,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 {children}
                 <Outlet />
                 <Outbox />
-          </div>
-          </div>
-      </main>
-    </div>
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
     </ThemeProvider>
   )

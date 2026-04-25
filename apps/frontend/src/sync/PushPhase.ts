@@ -66,7 +66,7 @@ export async function executePushPhase(
         }));
 
         // Send to server
-        const response = await apiClient.post('/api/sync/push', {
+        const response = await apiClient.post('/sync/push', {
             mutations,
         });
 
