@@ -6,7 +6,7 @@
  * UI is a pure consumer, never talks to backend directly.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { OfflineEntity } from '../domain/OfflineEntity';
 import { openDatabase, getAllFromStore, putInStore, getFromStore } from '../offline/db';
 import { globalSyncQueue } from '../offline/SyncQueue';
@@ -167,20 +167,24 @@ export function useOfflineStore<T = any>(options: UseOfflineStoreOptions): UseOf
         [db, storeName]
     );
 
-    // Trigger sync
-    const triggerSync = useCallback(async () => {
-        if (!db) return;
+    // // Trigger sync
+    const isSyncingRef = useRef(false);
 
+    const triggerSync = useCallback(async () => {
+        if (!db || isSyncingRef.current) return;
+
+        isSyncingRef.current = true;
         setSyncStatus('SYNCING');
+
         try {
             const result = await globalSyncOrchestrator.executeSyncCycle(
-                window as any, // Replace with actual HTTP client
+                window as any,
                 db
             );
 
             if (result.success) {
                 setSyncStatus('IDLE');
-                await loadItems(db); // Refresh after sync
+                await loadItems(db);
             } else {
                 setSyncStatus('ERROR');
                 setError(result.error);
@@ -188,8 +192,32 @@ export function useOfflineStore<T = any>(options: UseOfflineStoreOptions): UseOf
         } catch (err: any) {
             setSyncStatus('ERROR');
             setError(err.message);
+        } finally {
+            isSyncingRef.current = false;
         }
     }, [db]);
+    // const triggerSync = useCallback(async () => {
+    //     if (!db) return;
+
+    //     setSyncStatus('SYNCING');
+    //     try {
+    //         const result = await globalSyncOrchestrator.executeSyncCycle(
+    //             window as any, // Replace with actual HTTP client
+    //             db
+    //         );
+
+    //         if (result.success) {
+    //             setSyncStatus('IDLE');
+    //             await loadItems(db); // Refresh after sync
+    //         } else {
+    //             setSyncStatus('ERROR');
+    //             setError(result.error);
+    //         }
+    //     } catch (err: any) {
+    //         setSyncStatus('ERROR');
+    //         setError(err.message);
+    //     }
+    // }, [db]);
 
     // Auto-sync interval
     useEffect(() => {

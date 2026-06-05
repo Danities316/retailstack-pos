@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
 import { apiClient } from '@/lib/apiClient'
+import { ScanLine } from 'lucide-react'
 
 interface User {
   id: string
@@ -20,6 +21,8 @@ export const UsersPage = () => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Load users
   useEffect(() => {
@@ -66,6 +69,29 @@ export const UsersPage = () => {
     })
   }
 
+  const handleDeleteClick = (user: User) => {
+    setDeleteTarget(user)
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteTarget(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+
+    setIsDeleting(true)
+    try {
+      await apiClient.request(`/users/${deleteTarget.id}`, { method: 'DELETE' })
+      setUsers(prev => prev.filter(u => u.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user. Please try again.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -78,13 +104,18 @@ export const UsersPage = () => {
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl text-blue-600 font-semibold">Users</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900">Users</h1>
           <p className="text-gray-600">Manage users in your organization</p>
         </div>
         {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'MANAGER') && (
-          <Link to="/dashboard/users/invite">
-            <Button className="bg-blue-600 hover:bg-blue-400 text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150">Invite User</Button>
-          </Link>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/dashboard/users/invite')}
+            style={{ background: '#0f172a', borderColor: '#0f172a', color: '#D4AF37' }}
+          >
+            + Invite User
+          </Button>
+
         )}
       </div>
 
@@ -155,20 +186,17 @@ export const UsersPage = () => {
                     >
                       View
                     </Button>
-                    {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && 
-                     user.id !== currentUser?.id && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600"
-                        onClick={() => {
-                          // TODO: Implement user deletion
-                          alert('User deletion not implemented yet')
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    )}
+                    {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') &&
+                      user.id !== currentUser?.id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600"
+                          onClick={() => handleDeleteClick(user)}
+                        >
+                          Delete
+                        </Button>
+                      )}
                   </div>
                 </td>
               </tr>
@@ -210,6 +238,38 @@ export const UsersPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+              Delete user
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold">{deleteTarget.name || deleteTarget.email}</span>? This action
+              cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

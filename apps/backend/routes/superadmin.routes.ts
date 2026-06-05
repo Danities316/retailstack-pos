@@ -47,7 +47,6 @@ router.post('/tenants', async (req: AuthRequest, res: any) => {
         phoneNumber,
         logoUrl,
         colorScheme,
-        loyverseApiKey,
         users: {
           create: {
             email: ownerEmail,

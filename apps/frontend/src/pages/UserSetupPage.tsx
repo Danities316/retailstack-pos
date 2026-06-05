@@ -29,6 +29,9 @@ export const UserSetupPage = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [otpInfo, setOtpInfo] = useState<{ attempts: number; expiresAt: string; maxAttempts: number } | null>(null)
+  const [resending, setResending] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   // Verify token and get user info
   useEffect(() => {
@@ -151,6 +154,102 @@ export const UserSetupPage = () => {
         return 'Cashier'
       default:
         return role
+    }
+  }
+
+  // Update current time every second for expiry countdown
+  useEffect(() => {
+    if (!otpInfo) return
+
+    const intervalId = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    return () => clearInterval(intervalId)
+  }, [otpInfo])
+
+  // Fetch OTP info when email changes
+  useEffect(() => {
+    const fetchOtpInfo = async () => {
+      if (!email || setupMethod !== 'code') {
+        setOtpInfo(null)
+        return
+      }
+
+      try {
+        const response = await apiClient.request(`/auth/setup-code-info?email=${encodeURIComponent(email)}`)
+        setOtpInfo({
+          attempts: response.attempts || 0,
+          expiresAt: response.expiresAt,
+          maxAttempts: response.maxAttempts || 5
+        })
+        setError(null)
+      } catch (err: any) {
+        // Don't show error if it's just "not found" or "expired" - user might not have entered email yet
+        if (err.message && !err.message.includes('404') && !err.message.includes('expired')) {
+          console.error('Error fetching OTP info:', err)
+        }
+        setOtpInfo(null)
+      }
+    }
+
+    // Debounce the API call
+    const timeoutId = setTimeout(() => {
+      fetchOtpInfo()
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [email, setupMethod])
+
+  const handleResendCode = async () => {
+    if (!email) {
+      setError('Please enter your email address first')
+      return
+    }
+
+    setResending(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await apiClient.request('/auth/resend-setup-code', {
+        method: 'POST',
+        body: {
+          email
+        }
+      })
+
+      setOtpInfo({
+        attempts: response.attempts || 0,
+        expiresAt: response.expiresAt,
+        maxAttempts: 5
+      })
+      setSuccess('Setup code has been resent successfully!')
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend setup code')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  const formatExpiryTime = (expiresAt: string) => {
+    try {
+      const expiryDate = new Date(expiresAt)
+      const diffMs = expiryDate.getTime() - currentTime.getTime()
+      
+      if (diffMs <= 0) {
+        return 'Expired'
+      }
+
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffSecs = Math.floor((diffMs % 60000) / 1000)
+      
+      if (diffMins > 0) {
+        return `${diffMins}m ${diffSecs}s`
+      }
+      return `${diffSecs}s`
+    } catch {
+      return 'Unknown'
     }
   }
 
@@ -322,6 +421,14 @@ export const UserSetupPage = () => {
                   <p className="mt-1 text-xs text-gray-500">
                     Enter the 6-digit code from your SMS
                   </p>
+                  {otpInfo && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                      <div className="flex justify-between items-center">
+                        <span>Attempts: <span className={`font-semibold ${otpInfo.attempts >= otpInfo.maxAttempts ? 'text-red-600' : ''}`}>{otpInfo.attempts}/{otpInfo.maxAttempts}</span></span>
+                        <span>Expires in: <span className="font-semibold">{formatExpiryTime(otpInfo.expiresAt)}</span></span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -367,9 +474,20 @@ export const UserSetupPage = () => {
                 </div>
               </form>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-2">
                 <p className="text-sm text-gray-600">
-                  Didn't receive a code? <br />
+                  Didn't receive a code?
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resending || !email}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {resending ? 'Resending...' : 'Resend Setup Code'}
+                </Button>
+                <p className="text-xs text-gray-500">
                   <button
                     type="button"
                     onClick={() => navigate('/login')}

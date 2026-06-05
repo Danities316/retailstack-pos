@@ -64,7 +64,9 @@ router.post('/clock-in', async (req: AuthRequest, res: any) => {
                 error: 'Conflict: User is already clocked in.',
                 shiftId: existingShift.id,
             });
+            return;
         }
+        // 2. Create the new active shift
         // 2. Create the new active shift
         const newShift = await prisma.shift.create({
             data: {
@@ -91,7 +93,7 @@ router.post('/clock-in', async (req: AuthRequest, res: any) => {
 // Closes the current active shift.
 // ====================================================================
 router.post('/clock-out/:shiftId', async (req: AuthRequest, res: any) => {
-    const { id } = req.params;
+    const { shiftId: id } = req.params;
     const cashierId = req.user!.userId;
     const tenantId = req.user!.tenantId;
     const { endFloat, notes } = req.body;

@@ -16,7 +16,6 @@ const sale_routes_1 = __importDefault(require("../routes/sale.routes"));
 const category_routes_1 = __importDefault(require("../routes/category.routes"));
 const inventory_routes_1 = __importDefault(require("../routes/inventory.routes"));
 const dashboard_routes_1 = __importDefault(require("../routes/dashboard.routes"));
-const stripe_route_1 = __importDefault(require("../routes/stripe.route"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // CORS configuration for production
@@ -61,7 +60,6 @@ app.use('/api/users', user_middleware_1.protect, user_routes_1.default);
 app.use('/api/categories', auth_middleware_1.protect, category_routes_1.default);
 app.use('/api/inventory', auth_middleware_1.protect, inventory_routes_1.default);
 app.use('/api/dashboard', auth_middleware_1.protect, dashboard_routes_1.default);
-app.use('/api/dashboard/payment', auth_middleware_1.protect, stripe_route_1.default);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Backend server running on port:${PORT}`);

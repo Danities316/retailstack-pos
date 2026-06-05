@@ -86,10 +86,10 @@ export const InviteUserPage = () => {
     <div className="max-w-2xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl text-blue-600 font-semibold">Invite User</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900">Invite User</h1>
           <p className="text-gray-600">Send an invitation to join your organization</p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/dashboard/users')}>
+        <Button style={{ background: '#0f172a', borderColor: '#0f172a', color: '#D4AF37' }} onClick={() => navigate('/dashboard/users')}>
           Back to Users
         </Button>
       </div>
@@ -229,12 +229,12 @@ export const InviteUserPage = () => {
           </div>
 
           <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-400 text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150">
+            <Button type="submit" disabled={loading} style={{ background: '#0f172a', borderColor: '#0f172a', color: '#D4AF37' }}>
               {loading ? 'Sending Invitation...' : 'Send Invitation'}
             </Button>
             <Button
               type="button"
-              variant="outline"
+              style={{ background: '#D4AF37', borderColor: '#0f172a', color: '#f0eced' }}
               onClick={() => navigate('/dashboard/users')}
             >
               Cancel

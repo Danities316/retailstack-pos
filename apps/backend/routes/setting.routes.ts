@@ -65,6 +65,8 @@ router.put('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
             theme,
             offlineModeEnabled,
             autoSyncInterval,
+            vatEnabled,
+            vatRate,
         } = req.body
 
         const updated = await prisma.storeSettings.upsert({
@@ -87,6 +89,8 @@ router.put('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
                 theme,
                 offlineModeEnabled,
                 autoSyncInterval,
+                vatEnabled,
+                vatRate,
             },
             create: {
                 tenantId,
@@ -101,6 +105,8 @@ router.put('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
                 theme,
                 offlineModeEnabled,
                 autoSyncInterval,
+                vatEnabled: vatEnabled ?? false,
+                vatRate: vatRate ?? 0,
             }
         })
 
@@ -111,57 +117,6 @@ router.put('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
 
     }
 })
-// GET /api/settings/email-templates - Get all email templates
-router.get('/email-templates', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response) => {
-    try {
-        const tenantId = req.user?.tenantId
-        if (!tenantId) {
-            res.status(401).json({ error: 'Unauthorized' })
-            return
-        }
 
-        const templates = await prisma.emailTemplate.findMany({
-            where: { tenantId }
-        })
-
-        res.json(templates)
-    } catch (err: any) {
-        console.error('GET /email-templates error:', err)
-        res.status(500).json({ error: 'Server error' })
-    }
-})
-// PUT /api/settings/email-templates/:templateType - Update email template
-router.put('/email-templates/:templateType', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response) => {
-    try {
-        const tenantId = req.user?.tenantId
-        if (!tenantId) {
-            res.status(401).json({ error: 'Unauthorized' })
-            return
-        }
-
-        const { templateType } = req.params
-        const { subject, htmlContent, variables, isActive } = req.body
-
-        const updated = await prisma.emailTemplate.upsert({
-            where: {
-                tenantId_templateType: { tenantId, templateType }
-            },
-            update: { subject, htmlContent, variables, isActive },
-            create: {
-                tenantId,
-                templateType,
-                subject,
-                htmlContent,
-                variables,
-                isActive
-            }
-        })
-
-        res.json(updated)
-    } catch (err: any) {
-        console.error('PUT /email-templates error:', err)
-        res.status(500).json({ error: 'Server error' })
-    }
-})
 
 export default router;

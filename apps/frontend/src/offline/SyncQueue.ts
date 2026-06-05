@@ -1,3 +1,5 @@
+import { openDatabase } from '@/offline/db'
+
 export type QueueItemState = 'PENDING' | 'RETRYING' | 'POISONED';
 
 export type MutationType = 'CREATE' | 'UPDATE' | 'DELETE';
@@ -31,36 +33,30 @@ export class SyncQueue {
     private queue: SyncQueueItem[] = [];
     private nextSequenceNumber = 1;
     private db: IDBDatabase | null = null;
-    private readonly DB_NAME = 'retailstack-posdb';
-    private readonly DB_VERSION = 1;
+    // NOTE: Previously 'retailstack-posdb'. Unified 2026 to share one DB with db.ts.
+    // Existing users lose any queued items that were not yet synced.
+    // Acceptable for pre-launch; add migration if needed post-launch.
+    private readonly DB_NAME = 'retailstack_pos';
+    private readonly DB_VERSION = 2;
     private readonly STORE_NAME = 'syncQueue';
+
+    // Observer set - UI hooks subscribe here to react to queue mutations.
+    // Using a Set so duplicate subscriptions from React StrictMode double-mount
+    // are deduplicated automatically.
+    private listeners: Set<() => void> = new Set();
 
     /**
      * Initialize IndexedDB for persistence.
      */
     async initialize(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-
-            request.onerror = () => {
-                console.error('IndexedDB open failed:', request.error);
-                reject(request.error);
-            };
-
-            request.onsuccess = () => {
-                this.db = request.result;
-                this._ensureStoreExists();
-                this._loadFromDB().catch(err => console.error('Failed to load queue from IndexedDB:', err));
-                resolve();
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-                    db.createObjectStore(this.STORE_NAME, { keyPath: 'idempotencyKey' });
-                }
-            };
-        });
+        try {
+            const db = await openDatabase();
+            this.db = db;
+            await this._loadFromDB();
+        } catch (error) {
+            console.error('[SyncQueue] IndexedDB open failed:', error);
+            throw error;
+        }
     }
 
     /**
@@ -98,6 +94,7 @@ export class SyncQueue {
                     this.loadFromState(items);
                     console.log(`Loaded ${items.length} items from IndexedDB`);
                 }
+                this._notify();
                 resolve();
             };
         });
@@ -136,15 +133,35 @@ export class SyncQueue {
      * Enqueue a mutation for sync.
      * Idempotency key is deterministic (based on entity identity, not time) to survive retries.
      */
-    enqueue(
+    /**
+     * Notify all subscribers that queue state has changed.
+     * Called synchronously after every mutation so React state updates
+     * in the same event-loop tick as the mutation.
+     */
+    private _notify(): void {
+        this.listeners.forEach(fn => fn());
+    }
+
+    /**
+     * Subscribe to queue mutations.
+     * Returns an unsubscribe function - call it in useEffect cleanup.
+     *
+     * Usage:
+     *   useEffect(() => globalSyncQueue.subscribe(() => refresh()), []);
+     */
+    subscribe(fn: () => void): () => void {
+        this.listeners.add(fn);
+        return () => this.listeners.delete(fn);
+    }
+
+    async enqueue(
         entityId: string,
         entityType: string,
         mutationType: MutationType,
         payload: any,
         baseVersion: number,
         clientVersion: number
-    ): SyncQueueItem {
-        // Deterministic idempotency key: survives retries and deduplicates on server
+    ): Promise<SyncQueueItem> {
         const idempotencyKey = `${entityType}_${entityId}_v${baseVersion}_v${clientVersion}_${mutationType}`;
         const item: SyncQueueItem = {
             idempotencyKey,
@@ -161,9 +178,56 @@ export class SyncQueue {
         };
 
         this.queue.push(item);
-        this._saveToDB().catch(err => console.error('Failed to persist enqueue:', err));
+
+        try {
+            await this._saveToDB();
+        } catch (err) {
+            // DB write failed — remove the item from memory too so the queue
+            // stays consistent with what is actually persisted on disk.
+            // The caller will receive this error and must show the cashier a
+            // visible failure — do NOT swallow it here.
+            this.queue.pop();
+            this.nextSequenceNumber--;
+            console.error('[SyncQueue] Failed to persist enqueue to IndexedDB:', err);
+            throw new Error(
+                'Could not save sale to local storage. ' +
+                'Your device storage may be full. Please free up space and try again.'
+            );
+        }
+
+        this._notify();
         return item;
     }
+
+    // enqueue(
+    //     entityId: string,
+    //     entityType: string,
+    //     mutationType: MutationType,
+    //     payload: any,
+    //     baseVersion: number,
+    //     clientVersion: number
+    // ): SyncQueueItem {
+    //     // Deterministic idempotency key: survives retries and deduplicates on server
+    //     const idempotencyKey = `${entityType}_${entityId}_v${baseVersion}_v${clientVersion}_${mutationType}`;
+    //     const item: SyncQueueItem = {
+    //         idempotencyKey,
+    //         sequenceNumber: this.nextSequenceNumber++,
+    //         entityId,
+    //         entityType,
+    //         baseVersion,
+    //         clientVersion,
+    //         mutationType,
+    //         payload,
+    //         state: 'PENDING',
+    //         retryCount: 0,
+    //         createdAt: new Date().toISOString(),
+    //     };
+
+    //     this.queue.push(item);
+    //     this._saveToDB().catch(err => console.error('Failed to persist enqueue:', err));
+    //     this._notify();
+    //     return item;
+    // }
 
     /**
      * Get all pending items in order.
@@ -196,6 +260,7 @@ export class SyncQueue {
         }
 
         this._saveToDB().catch(err => console.error('Failed to persist markRetrying:', err));
+        this._notify();
         return true;
     }
 
@@ -208,6 +273,7 @@ export class SyncQueue {
 
         this.queue.splice(index, 1);
         this._saveToDB().catch(err => console.error('Failed to persist remove:', err));
+        this._notify();
         return true;
     }
 
@@ -218,6 +284,7 @@ export class SyncQueue {
         this.queue = [];
         this.nextSequenceNumber = 1;
         this._saveToDB().catch(err => console.error('Failed to persist clear:', err));
+        this._notify();
     }
 
     /**

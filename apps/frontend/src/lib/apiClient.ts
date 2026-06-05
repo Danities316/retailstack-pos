@@ -19,6 +19,17 @@ class ApiClient {
       return null
     }
 
+    // ── Offline guard ─────────────────────────────────────────────────────────
+    // If the device has no connectivity, do NOT attempt refresh and do NOT
+    // clear auth or redirect. The caller will get null and the request will
+    // fail — but the offline sale path in NewSalePage will handle it cleanly.
+    // Ejecting the user mid-sale because of a network drop is worse than
+    // letting them continue with an expired token until they reconnect.
+    if (!navigator.onLine) {
+      console.warn('[apiClient] Device offline — skipping token refresh, keeping session alive')
+      return null
+    }
+
     try {
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: 'POST',
@@ -42,17 +53,63 @@ class ApiClient {
         }
       }
 
-      // Refresh failed, clear auth and redirect to login
+      // ── Online but refresh genuinely failed ───────────────────────────────
+      // Token is expired AND server rejected the refresh token (revoked,
+      // expired refresh token, deleted user). Safe to eject now.
       this.clearAuth()
       window.location.href = '/login'
       return null
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      this.clearAuth()
-      window.location.href = '/login'
+    } catch (error: any) {
+      // ── Network error during refresh attempt ──────────────────────────────
+      // fetch() threw — could be a transient network blip even if
+      // navigator.onLine was true at the check above (onLine is not perfectly
+      // reliable). Do not eject — let the caller handle the null gracefully.
+      console.warn('[apiClient] Token refresh network error — keeping session, will retry:', error?.message)
       return null
     }
   }
+
+  // async refreshAccessToken(): Promise<string | null> {
+  //   const refreshToken = localStorage.getItem('refresh_token')
+  //   if (!refreshToken) {
+  //     this.clearAuth()
+  //     return null
+  //   }
+
+  //   try {
+  //     const response = await fetch(`${this.baseURL}/auth/refresh`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${refreshToken}`
+  //       }
+  //     })
+
+  //     if (response.ok) {
+  //       const data = await response.json()
+  //       const { accessToken, refreshToken: newRefreshToken } = data.data || data
+
+  //       if (accessToken) {
+  //         localStorage.setItem('auth_token', accessToken)
+  //         if (newRefreshToken) {
+  //           localStorage.setItem('refresh_token', newRefreshToken)
+  //         }
+  //         this.onRefreshed(accessToken)
+  //         return accessToken
+  //       }
+  //     }
+
+  //     // Refresh failed, clear auth and redirect to login
+  //     this.clearAuth()
+  //     window.location.href = '/login'
+  //     return null
+  //   } catch (error) {
+  //     console.error('Token refresh failed:', error)
+  //     this.clearAuth()
+  //     window.location.href = '/login'
+  //     return null
+  //   }
+  // }
 
   private clearAuth() {
     localStorage.removeItem('auth_token')
@@ -86,19 +143,38 @@ class ApiClient {
     }
 
     try {
+      console.log(`API Request: ${endpoint}`, config)
       let response = await fetch(`${this.baseURL}${endpoint}`, config)
 
       // Handle 401 Unauthorized - attempt token refresh
       if (response.status === 401 && !this.isRefreshing) {
+        // this.isRefreshing = true
+        // const newToken = await this.refreshAccessToken()
+        // this.isRefreshing = false
+
+        // if (newToken) {
+        //   // Retry the original request with new token
+        //   const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
+        //   const retryConfig: RequestInit = { ...options, headers: retryHeaders }
+        //   response = await fetch(`${this.baseURL}${endpoint}`, retryConfig)
+        // }
+
         this.isRefreshing = true
         const newToken = await this.refreshAccessToken()
         this.isRefreshing = false
 
         if (newToken) {
-          // Retry the original request with new token
+          // Refresh succeeded — retry the original request with the new token
           const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
           const retryConfig: RequestInit = { ...options, headers: retryHeaders }
           response = await fetch(`${this.baseURL}${endpoint}`, retryConfig)
+        } else if (!navigator.onLine) {
+          // Offline and refresh skipped — throw a typed error so NewSalePage
+          // can route to the offline sale path instead of showing a generic error
+          const offlineError: any = new Error('Device is offline')
+          offlineError.code = 'OFFLINE'
+          offlineError.status = 0
+          throw offlineError
         }
       } else if (response.status === 401 && this.isRefreshing) {
         // Token refresh is in progress, wait for it to complete
@@ -113,12 +189,27 @@ class ApiClient {
           })
         })
       }
+      console.log(`API Request: ${endpoint}`, config, 'Response:', response)
 
       if (response.ok) {
         const data = await response.json()
         return data
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        // Try to parse error response to get detailed error info
+        let errorData: any = { status: response.status, statusText: response.statusText }
+        try {
+          const body = await response.json()
+          errorData = { ...errorData, ...body }
+        } catch {
+          // If response body is not JSON, just use status info
+        }
+
+        // Create error with all details
+        const error: any = new Error(errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+        error.code = errorData.code
+        error.status = response.status
+        error.details = errorData
+        throw error
       }
     } catch (error) {
       throw error
@@ -135,6 +226,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(productData)
     })
+  }
+
+  async lookupBarcode(code: string) {
+    return await this.request(`/products/barcode-lookup/${encodeURIComponent(code)}`)
   }
 
   /**
@@ -167,9 +262,21 @@ class ApiClient {
         body: JSON.stringify(saleData)
       })
     } catch (err: any) {
+      // Check if this is a business logic error that should NOT fall back to offline
+      // Business logic errors should be handled by the UI, not persisted offline
+      if (err.status === 402 || err.code === 'SHIFT_REQUIRED') {
+        // Re-throw shift-required errors so frontend can show the clock-in modal
+        throw err
+      }
+
+      if (err.status === 400 || err.status === 409 || err.status === 403) {
+        // Re-throw validation and auth errors - don't fallback to offline
+        throw err
+      }
+
       // Network or other failure -> fallback to offline outbox
-      console.warn('[Offline] Network request failed, attemping to persist to IndexedDB', err.message)
-      
+      console.warn('[Offline] Network request failed, attempting to persist to IndexedDB', err.message)
+
       try {
         // Lazy import to avoid pulling IDB logic into environments that don't have window/indexedDB
         const { openDatabase, putInStore } = await import('@/offline/db')
@@ -213,7 +320,7 @@ class ApiClient {
         // If offline persistence itself failed, log it and still return a local ack
         // so the UI does not show "failed to fetch" when the user is offline
         console.error('[Offline] Failed to persist sale to IndexedDB', persistErr)
-        
+
         // Generate a local ID anyway so the user knows the action was attempted
         const id = `local_sale_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
         return {
@@ -229,6 +336,15 @@ class ApiClient {
   // Dashboard stats methods
   async getDashboardStats(tenantId: string, token?: string) {
     return await this.request('/dashboard/quick-stats', {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'x-tenant-id': tenantId,
+      },
+    })
+  }
+
+  async getDailySummary(tenantId: string, token?: string) {
+    return await this.request('/dashboard/daily-summary', {
       headers: {
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         'x-tenant-id': tenantId,
@@ -301,7 +417,15 @@ class ApiClient {
       },
     })
   }
-
+  // Manager & Owner Dashboard stats methods (Add this)
+  async getTopProducts(tenantId: string, token?: string, limit = 5) {
+    return await this.request(`/dashboard/top-products?limit=${limit}`, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'x-tenant-id': tenantId,
+      },
+    })
+  }
   async uploadProducts(file: File, tenantId: string, token: string): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
@@ -319,6 +443,7 @@ class ApiClient {
       });
 
       console.log("uploadProducts data received:", data);
+      console.log("uploadProducts report:", data.report);
       return data; // Return the data directly to the component
 
     } catch (error: any) {
@@ -327,6 +452,92 @@ class ApiClient {
       console.error("Upload error details:", error);
       throw new Error(error.report.errors[0].error || "Failed to upload products.");
     }
+  }
+
+  // ============================================================================
+  // GLOBAL PRODUCT CATALOG METHODS
+  // ============================================================================
+
+  /**
+   * Create a product and automatically sync it to the global product catalog
+   * This is the main endpoint for product creation with global sync
+   */
+  async createProductWithGlobalSync(productData: any) {
+    return await this.request('/global-catalog/products', {
+      method: 'POST',
+      body: JSON.stringify(productData)
+    })
+  }
+
+  /**
+   * Search the global product catalog by name
+   * Useful for checking if a product exists before adding manually
+   */
+  async searchGlobalCatalog(query: string) {
+    const endpoint = `/global-catalog/search?q=${encodeURIComponent(query)}`
+    return await this.request(endpoint)
+  }
+
+  /**
+   * Lookup a product in the global catalog by barcode
+   * Returns product details if found, error if not
+   */
+  async lookupGlobalCatalogByBarcode(barcode: string) {
+    return await this.request(`/global-catalog/barcode/${encodeURIComponent(barcode)}`)
+  }
+
+  /**
+   * Get all products contributed by the current tenant
+   * Shows this store's impact on the community database
+   */
+  async getTenantCatalogContributions() {
+    return await this.request('/global-catalog/contributions')
+  }
+
+  /**
+   * Get statistics about the global product catalog
+   * Shows size and growth of community database
+   */
+  async getGlobalCatalogStats() {
+    return await this.request('/global-catalog/stats')
+  }
+
+  /**
+   * Manually sync an existing local product to global catalog
+   * Use when you want to add local products to community database
+   */
+  async syncProductToGlobalCatalog(productId: string) {
+    return await this.request('/global-catalog/sync-existing-product', {
+      method: 'POST',
+      body: JSON.stringify({ productId })
+    })
+  }
+
+  // HTTP helper methods for sync operations
+  async post(endpoint: string, data: any = {}) {
+    return await this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async get(endpoint: string) {
+    return await this.request(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  async put(endpoint: string, data: any = {}) {
+    return await this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(endpoint: string) {
+    return await this.request(endpoint, {
+      method: 'DELETE',
+    });
   }
 }
 

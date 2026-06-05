@@ -40,11 +40,15 @@ const AUTH_CONFIG = {
 const publicLimiter = rateLimit({
   windowMs: AUTH_CONFIG.RATE_LIMIT_WINDOW_MS,
   max: AUTH_CONFIG.RATE_LIMIT_MAX_REQUESTS,
-  message: 'Too many requests from this IP, please try again later.',
+  message: { error: 'Too many login attempts. Please wait a few minutes and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req: AuthRequest, res: any) => {
+    res.status(429).json({
+      error: 'Too many login attempts. Please wait a few minutes and try again.',
+    });
+  },
 });
-
 // Helper: Generate both access and refresh tokens
 function generateTokens(userId: string, tenantId: string | null, role: string, name: string | null) {
   const jwtSecret = process.env.JWT_SECRET;
@@ -72,6 +76,7 @@ function generateTokens(userId: string, tenantId: string | null, role: string, n
 router.post('/login', publicLimiter, async (req: any, res: any) => {
   const { email, password } = req.body;
 
+
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
@@ -80,6 +85,7 @@ router.post('/login', publicLimiter, async (req: any, res: any) => {
   const userAgent = req.get('user-agent');
 
   const user = await prisma.user.findUnique({ where: { email } });
+  console.log('Login attempt for email:', email, '— user found:', !!user);
 
   // Log failed login attempts
   if (!user || !(await comparePassword(password, user.password))) {
@@ -166,13 +172,17 @@ router.post('/login', publicLimiter, async (req: any, res: any) => {
       },
     });
 
-    // Reset failed attempts and lockout on successful login
+    // Capture isFirstLogin before clearing it
+    const isFirstLogin = user.isFirstLogin;
+
+    // Reset failed attempts, lockout, lastLoginAt, and clear isFirstLogin on successful login
     await prisma.user.update({
       where: { id: user.id },
       data: {
         failedLoginAttempts: 0,
         lockedUntil: null,
         lastLoginAt: new Date(),
+        isFirstLogin: false, // Cleared permanently after first successful login
       },
     });
 
@@ -185,18 +195,41 @@ router.post('/login', publicLimiter, async (req: any, res: any) => {
       userAgent,
     });
 
+    // Fetch tenant onboarding state (only if user belongs to a tenant)
+    let onboarding = null;
+    if (user.tenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: user.tenantId },
+        select: {
+          hasProduct: true,
+          hasSale: true,
+          hasInvitedUser: true,
+          onboardingCompletedAt: true,
+        },
+      });
+
+      if (tenant) {
+        // "completed" is derived — not stored — per spec
+        const completed = tenant.hasProduct && tenant.hasSale;
+        onboarding = {
+          hasProduct: tenant.hasProduct,
+          hasSale: tenant.hasSale,
+          hasInvitedUser: tenant.hasInvitedUser,
+          completed,
+        };
+      }
+    }
+
     res.json({
       message: 'Login successful',
       data: {
         accessToken,
         refreshToken: refreshTokenPayload,
         user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          tenantId: user.tenantId,
-          name: user.name,
+          ...user,
+          isFirstLogin, // true only on their very first login ever
         },
+        onboarding, // null for SUPER_ADMIN (no tenant); object for all others
       },
     });
   } catch (error: any) {
@@ -590,6 +623,12 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
     const { token: verificationToken, hashed: hashedVerificationToken } = generateToken();
     const verificationExpires = new Date(Date.now() + AUTH_CONFIG.VERIFICATION_TOKEN_EXPIRY_MS); // 24 hours
 
+    console.log(`[ONBOARD] Email: ${email}`);
+    console.log(`[ONBOARD] Generated token (first 8 chars): ${verificationToken.substring(0, 8)}...`);
+    console.log(`[ONBOARD] Hashed token (first 8 chars): ${hashedVerificationToken.substring(0, 8)}...`);
+    console.log(`[ONBOARD] Expires at: ${verificationExpires.toISOString()} (${verificationExpires.getTime()})`);
+    console.log(`[ONBOARD] Current time: ${new Date().toISOString()} (${Date.now()})`);
+
     // Hash password for storage
     const hashedPassword = await hashPassword(password);
 
@@ -598,6 +637,9 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
       data: {
         name: tenantName,
         phoneNumber,
+        // New tenants start with all onboarding flags false (schema defaults)
+        // hasProduct: false, hasSale: false, hasInvitedUser: false (all default false)
+        // onboardingCompletedAt: null (schema default)
         users: {
           create: {
             email,
@@ -605,6 +647,7 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
             name: ownerName || email.split('@')[0],
             phoneNumber,
             role: UserRole.OWNER,
+            isFirstLogin: true, // Explicitly set — owner has never logged in
             // Email verification fields (using setupToken for verification)
             setupToken: hashedVerificationToken,
             setupTokenExpires: verificationExpires,
@@ -621,14 +664,32 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
       }
     });
 
-    // In production, send email with verification link
-    const verificationLink = `${process.env.BASE_URL}/api/auth/verify-email?token=${verificationToken}`;
+    // Verify token was stored correctly
+    const createdUser = await prisma.user.findUnique({
+      where: { email },
+      select: { setupToken: true, setupTokenExpires: true }
+    });
+
+    console.log(`[ONBOARD] Token stored in DBsssss: ${createdUser?.setupToken}`);
+    console.log(`[ONBOARD] Token stored in DB: ${createdUser?.setupToken ? 'YES' : 'NO'}`);
+    if (createdUser?.setupToken) {
+      console.log(`[ONBOARD] Stored token (first 8 chars): ${createdUser.setupToken.substring(0, 8)}...`);
+      console.log(`[ONBOARD] Stored expires: ${createdUser.setupTokenExpires?.toISOString()}`);
+    }
+
+    // Generate verification link for email (point to FRONTEND, not backend)
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
     console.log(`--DEV ONLY-- Email verification link for ${email}: ${verificationLink}`);
+
+    // Include dev testing link in response
+    const devLink = process.env.NODE_ENV !== 'production' ? verificationLink : undefined;
 
     res.status(201).json({
       message: 'Onboarding successful. Please verify your email to activate your account.',
       tenant,
-      verificationLink: verificationLink
+      verificationLink: devLink, // For dev testing only
+      devTestingNote: process.env.NODE_ENV !== 'production' ? 'DEV MODE: Click the verificationLink directly to test' : undefined,
+      nextStep: 'Check your email for a verification link. The link expires in 24 hours.'
     });
 
     // Send verification email
@@ -641,6 +702,8 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
     // if (!emailResult.success) {
     //   console.warn(`Failed to send onboarding email to ${email}: ${emailResult.error}`);
     // }
+
+    console.log(`--DEV ONLY-- Onboarding email content for ${email}:\nSubject: Welcome to RetailStack, ${tenantName}!\nBody: Hi ${ownerName || email.split('@')[0]},\n\nThank you for signing up for RetailStack! Please verify your email by clicking the link below:\n\n${verificationLink}\n\nThis link will expire in 24 hours.\n\nBest regards,\nThe RetailStack Team`);
 
     // Create OTP for phone verification and send via SMS (if phone provided)
     if (phoneNumber) {
@@ -660,6 +723,8 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
               expiresAt: otpExpires,
             },
           });
+
+          console.log(`--DEV ONLY-- Generated OTP for ${phoneNumber}: ${code} (expires at ${otpExpires.toISOString()})`);
 
           const smsResult = await NotificationService.sendOnboardingSMS(phoneNumber, Number(code));
           if (!smsResult.success) {
@@ -754,65 +819,264 @@ router.post('/verify-otp', async (req: any, res: any) => {
 });
 
 // GET /api/auth/verify-email/:token - Verify email address (public endpoint)
-router.get('/user/verify-email/:token', async (req: any, res: any) => {
+router.get('/verify-email/:token', async (req: any, res: any) => {
   const { token } = req.params;
 
   try {
+    console.log(`[VERIFY-EMAIL] Received token (first 8 chars): ${token.substring(0, 8)}...`);
+    console.log(`[VERIFY-EMAIL] Token length: ${token.length}`);
+
     const hashedToken = hashToken(token);
+    console.log(`[VERIFY-EMAIL] Hashed token (first 8 chars): ${hashedToken.substring(0, 8)}...`);
+
+    const now = new Date();
+    console.log(`[VERIFY-EMAIL] Current time: ${now.toISOString()} (${now.getTime()})`);
+
+    // First, find all users with ANY setupToken for debugging
+    const allUsersWithTokens = await prisma.user.findMany({
+      where: { setupToken: { not: null } },
+      select: { email: true, setupToken: true, setupTokenExpires: true }
+    });
+    console.log(`[VERIFY-EMAIL] Users with pending verification: ${allUsersWithTokens.length}`);
+    allUsersWithTokens.forEach(u => {
+      console.log(`  - ${u.email}: token(${u.setupToken?.substring(0, 8)}...), expires: ${u.setupTokenExpires?.toISOString()}`);
+      // Compare hashes
+      if (u.setupToken === hashedToken) {
+        console.log(`    ✓ HASH MATCHES! This is the user.`);
+      } else {
+        console.log(`    ✗ Hash mismatch. Expected: ${hashedToken.substring(0, 8)}..., Got: ${u.setupToken?.substring(0, 8)}...`);
+      }
+    });
 
     const user = await prisma.user.findFirst({
       where: {
         setupToken: hashedToken,
         setupTokenExpires: {
-          gt: new Date() // Token hasn't expired
+          gt: now // Token hasn't expired
         }
       },
       select: {
         id: true,
         email: true,
-        tenantId: true
+        tenantId: true,
+        setupToken: true,
+        setupTokenExpires: true,
+        tenant: {
+          select: { name: true }
+        }
       }
     });
 
     if (!user) {
+      // Check if token exists but is expired
+      const expiredUser = await prisma.user.findFirst({
+        where: { setupToken: hashedToken }
+      });
+      if (expiredUser) {
+        const expiry = (expiredUser as any).setupTokenExpires;
+        const isExpired = expiry && expiry < now;
+        console.log(`[VERIFY-EMAIL] Found user but token is ${isExpired ? 'EXPIRED' : 'NOT MATCHING'}`);
+        console.log(`[VERIFY-EMAIL] Token expires: ${expiry?.toISOString()}, current: ${now.toISOString()}`);
+
+        return res.status(400).json({
+          error: 'Verification token has expired. Please request a new verification link.',
+          code: isExpired ? 'EXPIRED_TOKEN' : 'INVALID_TOKEN',
+          details: { isExpired, tokenExpiry: expiry?.toISOString() }
+        });
+      }
+
+      // Check if this email is already verified (token used previously)
+      const verifiedUser = await prisma.user.findFirst({
+        where: {
+          setupToken: null,
+          setupTokenExpires: null,
+          email: { not: '' } // Any user without a setup token
+        }
+      });
+
+      console.log(`[VERIFY-EMAIL] No user found with this token hash. Checking if email is already verified...`);
+      console.log(`[VERIFY-EMAIL] Users already verified: ${verifiedUser ? 'YES' : 'NO'}`);
+
       return res.status(400).json({
-        error: 'Invalid or expired verification token.'
+        error: 'Invalid or already used verification token. If your email is already verified, please log in instead.',
+        code: 'INVALID_OR_ALREADY_VERIFIED'
       });
     }
 
+    console.log(`[VERIFY-EMAIL] ✓ Token valid for user: ${user.email}`);
+
     // Mark email as verified (clear setup token)
-    // In the future, you may add an isEmailVerified boolean field
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         setupToken: null,
         setupTokenExpires: null
       }
     });
+    console.log(`[VERIFY-EMAIL] ✓ Token cleared for user: ${user.email}`);
 
+    // Return success response FIRST
     res.json({
       message: 'Email verified successfully. You can now log in.',
-      user: { email: user.email, tenantId: user.tenantId }
+      user: { email: user.email, tenantId: user.tenantId },
+      success: true
     });
 
-    // Send verification confirmation email asynchronously
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: user.tenantId || '' }
-    });
-    if (tenant) {
+    // Send verification confirmation email asynchronously (non-blocking)
+    // Errors here should not affect the verification success response
+    if (user.tenant) {
       NotificationService.sendEmailVerificationConfirm(
         user.email,
-        tenant.name,
-        `${process.env.BASE_URL || 'https://retailstack.com'}/login`
+        user.tenant.name,
+        `${process.env.BASE_URL || 'https://retailstack-pos.vercel.app/'}/login`
       ).catch(err => {
-        console.warn(`Failed to send verification confirmation to ${user.email}: ${err}`);
+        // Log email sending failure but don't propagate error
+        // User is already verified - this is just a courtesy notification
+        console.warn(`[VERIFY-EMAIL] ⚠️ Could not send verification confirmation email to ${user.email}:`, err?.message || err);
       });
     }
   } catch (error: any) {
-    console.error('Email verification error:', error);
+    console.error('[VERIFY-EMAIL] ❌ Verification error:', error);
     res.status(500).json({
       error: 'Failed to verify email.',
+      message: error instanceof Error ? error.message : String(error),
+      code: 'VERIFICATION_ERROR'
+    });
+  }
+});
+
+// DEBUG: GET /api/auth/debug/verify-status/:email - Check verification status (DEV ONLY)
+router.get('/debug/verify-status/:email', async (req: any, res: any) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({ error: 'Debug endpoint disabled in production' });
+  }
+
+  const { email } = req.params;
+  const now = new Date();
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        setupToken: true,
+        setupTokenExpires: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const hasToken = !!user.setupToken;
+    const isExpired = hasToken && user.setupTokenExpires! < now;
+    const timeUntilExpiry = hasToken ? user.setupTokenExpires!.getTime() - now.getTime() : null;
+    const isEmailVerified = !hasToken; // Email is verified when setupToken is null
+
+    res.json({
+      email: user.email,
+      isEmailVerified: isEmailVerified,
+      hasVerificationToken: hasToken,
+      tokenExpiry: user.setupTokenExpires?.toISOString(),
+      isTokenExpired: isExpired,
+      timeUntilExpiryMs: timeUntilExpiry,
+      timeUntilExpiryHours: timeUntilExpiry ? (timeUntilExpiry / (1000 * 60 * 60)).toFixed(2) : null,
+      currentTime: now.toISOString(),
+      tokenPreview: user.setupToken ? `${user.setupToken.substring(0, 8)}...${user.setupToken.substring(user.setupToken.length - 8)}` : null
+    });
+  } catch (error: any) {
+    console.error('Debug verify-status error:', error);
+    res.status(500).json({
+      error: 'Failed to check verification status',
       message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// POST /api/auth/resend-verification-email - Resend email verification link (rate-limited)
+router.post('/resend-verification-email', publicLimiter, async (req: any, res: any) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      error: 'Email is required.'
+    });
+  }
+
+  try {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        tenantId: true,
+        setupTokenExpires: true,
+        tenant: {
+          select: { name: true }
+        }
+      }
+    });
+
+    if (!user) {
+      // For security, don't reveal if user exists
+      return res.status(404).json({
+        error: 'User not found.'
+      });
+    }
+
+    // Check if email is already verified (setupTokenExpires is null)
+    if (!user.setupTokenExpires) {
+      return res.status(400).json({
+        error: 'Email is already verified. Please log in instead.',
+        code: 'ALREADY_VERIFIED'
+      });
+    }
+
+    // Generate new verification token
+    const { token: verificationToken, hashed: hashedVerificationToken } = generateToken();
+    const verificationExpires = new Date(Date.now() + AUTH_CONFIG.VERIFICATION_TOKEN_EXPIRY_MS); // 24 hours
+
+    // Update user with new verification token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        setupToken: hashedVerificationToken,
+        setupTokenExpires: verificationExpires
+      }
+    });
+
+    // Generate verification link (point to FRONTEND, not backend)
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+
+    // Send verification email
+    const emailResult = await NotificationService.sendOnboardingEmail(
+      user.email,
+      user.tenant?.name || 'ADINO POS',
+      user.email.split('@')[0],
+      verificationLink
+    );
+
+    if (!emailResult.success) {
+      console.warn(`Failed to send verification email to ${user.email}: ${emailResult.error}`);
+      return res.status(500).json({
+        error: 'Failed to send verification email. Please try again later.',
+        code: 'EMAIL_SEND_FAILED'
+      });
+    }
+
+    res.json({
+      message: 'Verification email sent successfully. Please check your inbox.',
+      success: true,
+      verificationLink: verificationLink // For dev testing
+    });
+  } catch (error: any) {
+    console.error('Resend verification email error:', error);
+    res.status(500).json({
+      error: 'Failed to resend verification email.',
+      message: error instanceof Error ? error.message : String(error),
+      code: 'RESEND_ERROR'
     });
   }
 });
@@ -1097,4 +1361,166 @@ router.post('/setup-account-sms', async (req: any, res: any) => {
   }
 });
 
+// GET /api/auth/setup-code-info - Get setup code info (attempts and expiry) for SMS-based invitations
+router.get('/setup-code-info', async (req: any, res: any) => {
+  const { email } = req.query;
+
+  if (!email) {
+    res.status(400).json({ error: 'Email is required.' });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: email as string }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User not found.' });
+      return;
+    }
+
+    // Check if setup is still valid (within 24 hours)
+    if (!user.setupTokenExpires || new Date() > user.setupTokenExpires) {
+      res.status(400).json({
+        error: 'Setup code has expired. Please request a new invitation.',
+        expired: true
+      });
+      return;
+    }
+
+    // Find active OTP record by userId
+    const otpRecord = await prisma.otpToken.findFirst({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        attempts: true,
+        expiresAt: true,
+      }
+    });
+
+    if (!otpRecord) {
+      res.status(400).json({
+        error: 'No active setup code found. Please request a new code.',
+        expired: true
+      });
+      return;
+    }
+
+    res.json({
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId
+      },
+      attempts: otpRecord.attempts || 0,
+      expiresAt: otpRecord.expiresAt.toISOString(),
+      maxAttempts: 5
+    });
+  } catch (error: any) {
+    console.error('Error fetching setup code info:', error);
+    res.status(500).json({
+      error: 'Failed to fetch setup code info.',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// POST /api/auth/resend-setup-code - Resend setup code for SMS-based invitations
+router.post('/resend-setup-code', publicLimiter, async (req: any, res: any) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400).json({ error: 'Email is required.' });
+    return;
+  }
+
+  try {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      // For security, don't reveal if user exists
+      res.status(404).json({ error: 'User not found.' });
+      return;
+    }
+
+    // Check if setup is still valid (within 24 hours)
+    if (!user.setupTokenExpires || new Date() > user.setupTokenExpires) {
+      res.status(400).json({ error: 'Setup code has expired. Please request a new invitation.' });
+      return;
+    }
+
+    // Check if user has phone number (required for SMS)
+    if (!user.phoneNumber) {
+      res.status(400).json({ error: 'Phone number not found for this user.' });
+      return;
+    }
+
+    // Mark all existing unused OTP tokens for this user as used
+    await prisma.otpToken.updateMany({
+      where: {
+        userId: user.id,
+        used: false
+      },
+      data: {
+        used: true
+      }
+    });
+
+    // Generate new 6-digit OTP code
+    const { code: otpCode, hashed: otpCodeHash } = generateNumericOtp(AUTH_CONFIG.OTP_LENGTH);
+    const otpExpires = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MS); // 10 minutes
+
+    // Create new OTP token record
+    await prisma.otpToken.create({
+      data: {
+        userId: user.id,
+        phoneNumber: user.phoneNumber,
+        codeHash: otpCodeHash,
+        expiresAt: otpExpires,
+        attempts: 0,
+      },
+    });
+
+    // Send SMS with new code
+    const setupPageUrl = `${process.env.BASE_URL}/setup`;
+    const smsMessage = `Your RetailStack POS setup code: ${otpCode}. Visit ${setupPageUrl} and enter this code to complete your account setup.`;
+    console.log(`--DEV ONLY-- Resent SMS to ${user.phoneNumber} with code: ${otpCode}`);
+
+    // Send SMS asynchronously (don't block response)
+    NotificationService.sendSMS({
+      phoneNumber: user.phoneNumber,
+      message: smsMessage
+    }).catch(err => {
+      console.warn(`Failed to send resend SMS to ${user.phoneNumber}: ${err}`);
+    });
+
+    res.json({
+      message: 'Setup code has been resent successfully.',
+      expiresAt: otpExpires.toISOString(),
+      attempts: 0,
+      devInfo: process.env.NODE_ENV === 'development' ? {
+        smsCode: otpCode
+      } : undefined
+    });
+  } catch (error: any) {
+    console.error('Error resending setup code:', error);
+    res.status(500).json({
+      error: 'Failed to resend setup code.',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export default router;
+
+
+

@@ -34,7 +34,7 @@ export class SyncOrchestrator {
         db: IDBDatabase,
         lastSyncTime?: string
     ): Promise<SyncOrchestrationResult> {
-        if (this.isSync()) {
+        if (this.issyncing) {
             return {
                 success: false,
                 startedAt: new Date().toISOString(),
@@ -51,13 +51,13 @@ export class SyncOrchestrator {
             };
         }
 
-        this.isSync(true);
+        this.issyncing = true;
         const startedAt = new Date().toISOString();
         const phases: any = {};
 
         try {
             // PHASE 1: PULL server changes
-            const pullResult = await executePullPhase(apiClient, db, lastSyncTime);
+            const pullResult = await executePullPhase(apiClient, db, globalSyncQueue, lastSyncTime);
             phases.pull = pullResult;
 
             if (!pullResult.success) {
@@ -78,6 +78,7 @@ export class SyncOrchestrator {
             // PHASE 4: ACK processed mutations
             const ackResult = await executeAckPhase(apiClient, queuedItems.map((item) => item.idempotencyKey));
             phases.ack = ackResult;
+            console.log('ACK Result:', ackResult);
 
             // Clean up ONLY acknowledged items from queue (if ACK succeeded)
             if (ackResult.success && ackResult.acknowledgedKeys.length > 0) {
@@ -112,18 +113,15 @@ export class SyncOrchestrator {
                 error: error.message || 'Sync orchestration failed',
             };
         } finally {
-            this.isSync(false);
+            this.issyncing = false;
         }
     }
 
     /**
-     * Check if sync is in progress or set state.
+     * Check if sync is in progress.
      */
-    private isSync(set?: boolean): boolean {
-        if (set !== undefined) {
-            this.isSync = () => set;
-        }
-        return this.isSync();
+    isSync(): boolean {
+        return this.issyncing;
     }
 
     /**

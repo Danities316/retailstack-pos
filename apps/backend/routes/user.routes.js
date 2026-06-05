@@ -104,7 +104,7 @@ router.post('/invite', (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
             return;
         }
-        const setupLink = `${process.env.BASE_URL}/api/users/setup-account?token=${setupToken}`;
+        const setupLink = `${process.env.FRONTEND_URL}/auth/setup?token=${setupToken}`;
         console.log(`--DEV ONLY-- Setup link for ${email}: ${setupLink}`);
         res.status(201).json({ message: 'Invitation sent successfully.', user: user });
     }

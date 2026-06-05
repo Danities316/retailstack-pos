@@ -4,7 +4,7 @@
  */
 
 import { OfflineEntity } from '../domain/OfflineEntity';
-import { SyncQueue } from './SyncQueue';
+import { SyncQueue } from '../offline/SyncQueue';
 
 export interface PullResponse {
     serverTime: string; // ISO 8601
@@ -38,7 +38,7 @@ export async function executePullPhase(
 ): Promise<PullPhaseResult> {
     try {
         // 1. Fetch changes from server
-        const response = await apiClient.post('/api/sync/pull', {
+        const response = await apiClient.post('/sync/pull', {
             lastSyncTime: lastSyncTime || new Date(0).toISOString(),
         });
 
@@ -200,13 +200,3 @@ async function applyServerChange(
     }
 }
 
-/**
- * Helper: get from object store.
- */
-function getFromStore(store: IDBObjectStore, id: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const request = store.get(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
