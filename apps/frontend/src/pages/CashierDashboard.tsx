@@ -26,7 +26,7 @@ interface ActiveShift {
 
 export const CashierDashboard = () => {
     const navigate = useNavigate();
-    const { setToken, user } = useAuth();
+    const { user, logout } = useAuth()
     const { isOnline, isSyncing, lastSync, syncError } = usePWAStatus();
     const [activeShift, setActiveShift] = useState<ActiveShift | null>(null);
     const [loadingShift, setLoadingShift] = useState(true);
@@ -88,7 +88,7 @@ export const CashierDashboard = () => {
 
 
     // 3. Handle Clock Out (and Sign Off)
-    const handleSignOffClick = () => {
+    const handleSignOffClick = async () => {
         // Check if the user is clocked in
         if (activeShift) {
             // If clocked in, show the full reconciliation/sign-off modal
@@ -100,8 +100,7 @@ export const CashierDashboard = () => {
             // If not clocked in, just log out directly (or confirm logout)
             const shouldSignOff = window.confirm("You are not clocked into a shift. Are you sure you want to Sign Off?");
             if (shouldSignOff) {
-                setToken(null);
-                navigate('/login');
+                await logout();
             }
         }
     };
@@ -133,8 +132,7 @@ export const CashierDashboard = () => {
         }
 
         // 3. Final sign-off (log out) - only runs if clock-out succeeded or wasn't needed
-        setToken(null);
-        navigate('/login');
+        await logout();
     };
 
     // Clock In Float Modal

@@ -20,6 +20,13 @@ export const CategoriesPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Theme colors
+  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#3B82F6'
+  const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#64748B'
+  const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim() || '#F8FAFC'
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim() || '#E2E8F0'
+  const errorColor = getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || '#EF4444'
+
   // Load categories
   useEffect(() => {
     const loadCategories = async () => {
@@ -56,17 +63,16 @@ export const CategoriesPage = () => {
 
   const renderCategoryTree = (categoryList: Category[], level: number = 0): JSX.Element[] => {
     return categoryList.map(category => (
-      <div key={category.id} className="border-l-2 border-gray-200 pl-4 ml-4">
-        <div className="flex items-center justify-between py-3 hover:bg-gray-50 rounded-lg px-3">
+      <div key={category.id} style={{ borderLeft: `2px solid #0f172a`, paddingLeft: 16, marginLeft: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', borderRadius: 8, transition: 'background 0.2s', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.background = surfaceColor + '60'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
           <div className="flex items-center space-x-3">
-            <div 
-              className="w-4 h-4 rounded-full bg-blue-500"
-              style={{ marginLeft: `${level * 20}px` }}
+            <div
+              style={{ width: 16, height: 16, borderRadius: '50%', background: '#D4AF37', marginLeft: `${level * 20}px` }}
             ></div>
             <div>
-              <h3 className="font-medium text-gray-900">{category.categoryName}</h3>
-              <p className="text-sm text-gray-500">
-                {category.children && category.children.length > 0 
+              <h3 style={{ fontWeight: 500, color: '#D4AF37', margin: 0 }}>{category.categoryName}</h3>
+              <p style={{ fontSize: 12, color: '#0f172a', margin: '4px 0 0 0' }}>
+                {category.children && category.children.length > 0
                   ? `${category.children.length} sub-categories`
                   : 'No sub-categories'
                 }
@@ -78,14 +84,15 @@ export const CategoriesPage = () => {
               size="sm"
               variant="outline"
               onClick={() => navigate(`/dashboard/categories/${category.id}/edit`)}
+              style={{ color: '#D4AF37', borderColor: '#0f172a', background: 'transparent', fontSize: 12, padding: '6px 12px', borderRadius: 6 }}
             >
               Edit
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="text-red-600"
               onClick={() => handleDelete(category.id)}
+              style={{ color: errorColor, borderColor: errorColor, background: 'transparent', fontSize: 12, padding: '6px 12px', borderRadius: 6 }}
             >
               Delete
             </Button>
@@ -103,39 +110,43 @@ export const CategoriesPage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p>Loading categories...</p>
+        <p style={{ color: secondaryColor }}>Loading categories...</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ maxWidth: '1152px', margin: '0 auto', padding: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl text-blue-600 font-semibold">Categories</h1>
-          <p className="text-gray-600">Manage your product categories</p>
+          <h1 className="text-3xl font-extrabold text-gray-900">Categories</h1>
+          <p style={{ color: secondaryColor, marginTop: 4 }}>Manage your product categories</p>
         </div>
         <Link to="/dashboard/categories/create">
-          <Button className="bg-blue-600 hover:bg-blue-400 text-white font-semibold px-6 py-2 rounded-md transition-colors duration-150">Create Category</Button>
+          <Button style={{ background: '#0f172a', borderColor: '#0f172a', color: '#D4AF37' }}>+ Create Category</Button>
         </Link>
       </div>
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      {error && (
+        <p style={{ color: errorColor, fontSize: 14, marginBottom: 16, padding: 12, background: '#FEE2E2', borderRadius: 8, borderLeft: `4px solid ${errorColor}` }}>
+          {error}
+        </p>
+      )}
 
       {/* Categories Tree */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Category Structure</h2>
-          
+      <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', marginBottom: 24 }}>
+        <div style={{ padding: 24, borderBottom: `1px solid ${borderColor}` }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#0f172a' }}>Category Structure</h2>
+
           {categories.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">No categories found</p>
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <p style={{ color: secondaryColor, marginBottom: 16 }}>No categories found</p>
               <Link to="/dashboard/categories/create">
-                <Button>Create Your First Category</Button>
+                <Button style={{ background: primaryColor, color: '#fff', padding: '10px 24px', borderRadius: 8 }}>Create Your First Category</Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {renderCategoryTree(categories)}
             </div>
           )}
@@ -143,22 +154,22 @@ export const CategoriesPage = () => {
       </div>
 
       {/* Category Statistics */}
-      <div className="mt-6 bg-blue-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Category Statistics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div style={{ background: surfaceColor, padding: 16, borderRadius: 12, border: `1px solid ${borderColor}` }}>
+        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#1E293B' }}>Category Statistics</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <div>
-            <p className="text-sm text-gray-600">Total Categories</p>
-            <p className="text-2xl font-bold">{categories.length}</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: secondaryColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Total Categories</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: '#D4AF37' }}>{categories.length}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Top Level Categories</p>
-            <p className="text-2xl font-bold">
+            <p style={{ fontSize: 12, fontWeight: 700, color: secondaryColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Top Level Categories</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: '#D4AF37' }}>
               {categories.filter(cat => !cat.parentId).length}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Sub Categories</p>
-            <p className="text-2xl font-bold">
+            <p style={{ fontSize: 12, fontWeight: 700, color: secondaryColor, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Sub Categories</p>
+            <p style={{ fontSize: 24, fontWeight: 700, color: '#D4AF37' }}>
               {categories.filter(cat => cat.parentId).length}
             </p>
           </div>

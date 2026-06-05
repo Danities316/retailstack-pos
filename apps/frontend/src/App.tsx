@@ -21,6 +21,7 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { NewSalePage } from './pages/NewSalePage';
 import { ProductImportPage } from './pages/ProductImportPage';
 import { CreateProductPage } from './pages/CreateProductPage';
+import { BarcodeProductPage } from './pages/BarcodeProductPage';
 import { EditProductPage } from './pages/EditProductPage';
 import { CreateCategoryPage } from './pages/CreateCategoryPage';
 import { EditCategoryPage } from './pages/EditCategoryPage';
@@ -30,12 +31,15 @@ import { InviteUserPage } from './pages/InviteUserPage';
 import UserInviteSetupPage from './pages/UserInviteSetupPage';
 import { UserDetailPage } from './pages/UserDetailPage';
 import { TenantDetailPage } from './pages/TenantDetailPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OfflineSyncProvider } from './context/OfflineSyncContext';
 import { getPostLoginRoute } from './lib/postLoginRoute';
 // Onboarding placeholder pages (UI implemented in next step)
 import OnboardingProductPage from './pages/OnboardingProductPage';
 import OnboardingFirstSalePage from './pages/OnboardingFirstSalePage';
+import CustomerDebtPage from '@/pages/CustomerDebtPage'
 
 // ─── Session-restore redirect guard ────────────────────────────────────────
 // Runs inside Router so it has access to navigate/location.
@@ -107,6 +111,8 @@ function App() {
                   <LoginPage />
                 </AlreadyAuthenticatedRoute>
               } />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
 
               {/* Onboarding routes — protected, owner-only */}
               <Route path="/onboarding/product" element={
@@ -139,6 +145,15 @@ function App() {
                 <ProtectedRoute>
                   <DashboardLayout>
                     <Dashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              } />
+
+
+              <Route path="/dashboard/debts" element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <CustomerDebtPage />
                   </DashboardLayout>
                 </ProtectedRoute>
               } />
@@ -190,11 +205,19 @@ function App() {
                 </ProtectedRoute>
               } />
 
+
               {/* Additional dashboard routes for create/edit flows */}
               <Route path="/dashboard/products/new" element={
                 <ProtectedRoute>
                   <DashboardLayout>
                     <CreateProductPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard/products/scan" element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <BarcodeProductPage />
                   </DashboardLayout>
                 </ProtectedRoute>
               } />

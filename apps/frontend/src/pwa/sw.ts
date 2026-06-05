@@ -3,6 +3,8 @@
 // Note: Workbox imports require: npm install workbox-precache workbox-routing workbox-strategies workbox-expiration workbox-cacheable-response
 // Service Worker skeleton provided. Install Workbox and uncomment imports for production use.
 
+import { openDatabase } from '@/offline/db'
+
 declare const self: ServiceWorkerGlobalScope;
 
 const CACHE_NAMES = {
@@ -90,7 +92,10 @@ registerRoute(navigationRoute);
  */
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
+        event.waitUntil(self.skipWaiting());
+    }
+    if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ type: 'SW_ACK' });
     }
 });
 
@@ -107,12 +112,8 @@ self.addEventListener('sync', (event: any) => {
 
 async function replayPendingSales() {
     try {
-        // Access IndexedDB directly (no window dependency in SW context)
-        const db = await new Promise<IDBDatabase>((resolve, reject) => {
-            const request = indexedDB.open('retailstack_pos', 1)
-            request.onerror = () => reject(request.error)
-            request.onsuccess = () => resolve(request.result)
-        })
+        // Access IndexedDB using the shared schema migration helper.
+        const db = await openDatabase()
 
         // Get all sales from IndexedDB
         const allSales = await new Promise<any[]>((resolve, reject) => {

@@ -20,7 +20,7 @@ import {
   AlertTriangle, Printer, Banknote, CreditCard,
   Smartphone, MoreHorizontal, CheckCircle2, ScanLine,
   Minus, RefreshCw, Clock, Wifi, WifiOff,
-  Tag, Keyboard, Zap,
+  Tag, Keyboard, Zap, BookOpen,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +40,8 @@ const PAY = [
   { id: 'CASH', label: 'Cash', Icon: Banknote, col: '#16a34a', sub: 'Naira / coins', key: '1' },
   { id: 'TRANSFER', label: 'Transfer', Icon: Smartphone, col: '#2563eb', sub: 'Bank / USSD', key: '2' },
   { id: 'CARD', label: 'POS Card', Icon: CreditCard, col: '#7c3aed', sub: 'Debit / credit', key: '3' },
-  { id: 'OTHER', label: 'Other', Icon: MoreHorizontal, col: '#64748b', sub: 'Voucher / cheque', key: '4' },
+  { id: 'CREDIT', label: 'Owe Me', Icon: BookOpen, col: '#dc2626', sub: 'Charge to account', key: '4' },
+  { id: 'OTHER', label: 'Other', Icon: MoreHorizontal, col: '#64748b', sub: 'Voucher / cheque', key: '5' },
 ] as const;
 
 const DENOMS = [200, 500, 1_000, 2_000, 5_000, 10_000];
@@ -59,6 +60,7 @@ interface DoneSale {
   method: string; paid: number; change: number;
   cashier: string; store: string; ts: Date;
   pendingSync?: boolean; // true when sale was saved offline, not yet synced to server
+  customerName: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,7 +110,7 @@ ${s.pendingSync ? '<div class="pending">⚠ PENDING SYNC — SALE QUEUED OFFLINE
 <div class="rw"><span>Receipt:</span><span>#${s.id.slice(0, 8).toUpperCase()}</span></div>
 <div class="rw"><span>Date:</span><span>${s.ts.toLocaleDateString('en-NG')}</span></div>
 <div class="rw"><span>Time:</span><span>${s.ts.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}</span></div>
-<div class="rw"><span>Cashier:</span><span>${s.cashier}</span></div>
+<div class=\"rw\"><span>Cashier:</span><span>${s.cashier}</span></div>\n${s.customerName ? `<div class=\"rw\"><span>Customer:</span><span>${s.customerName}</span></div>` : ''}
 <div class="hr"></div>
 <table><thead><tr>
   <th style="text-align:left">Item</th>
@@ -117,15 +119,16 @@ ${s.pendingSync ? '<div class="pending">⚠ PENDING SYNC — SALE QUEUED OFFLINE
 </tr></thead><tbody>${rows}</tbody></table>
 <div class="hr"></div>
 <div class="rw"><span>Subtotal</span><span>${N(s.sub)}</span></div>
-<div class="rw"><span>VAT (7.5%)</span><span>${N(s.vat)}</span></div>
+${s.vat > 0 ? `<div class=\"rw\"><span>VAT</span><span>${N(s.vat)}</span></div>` : ''}
 <div class="hr"></div>
 <div class="tr"><span>TOTAL DUE</span><span>${N(s.total)}</span></div>
 <div class="hr"></div>
-<div class="rw"><span>Payment</span><span>${s.method}</span></div>
+<div class=\"rw\"><span>Payment</span><span>${s.method === 'CREDIT' ? 'Charged to Account' : s.method}</span></div>
+${s.method === 'CREDIT' ? `<div class=\"rw b\" style=\"color:#dc2626\"><span>AMOUNT OWED</span><span>${N(s.total)}</span></div>` : ''}
 <div class="rw"><span>Tendered</span><span>${N(s.paid)}</span></div>
 ${s.change > 0 ? `<div class="rw b"><span>CHANGE</span><span>${N(s.change)}</span></div>` : ''}
 <div class="hr"></div>
-<div class="vb">VAT INCLUSIVE — FIRS 7.5% APPLIED</div>
+${s.vat > 0 ? '<div class=\"vb\">VAT INCLUSIVE — FIRS REGISTERED</div>' : '<div class=\"ft\">Prices are VAT exclusive</div>'}
 <div class="ft">
   <div>Thank you for your patronage!</div>
   <div style="margin-top:2px">Powered by RetailStack POS Enterprise</div>
@@ -146,12 +149,27 @@ const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </kbd>
 );
 
+function stringToColorPOS(str: string): string {
+  const palette = [
+    '#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981',
+    '#ef4444', '#ec4899', '#14b8a6', '#f97316',
+    '#6366f1', '#84cc16',
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length] ?? '#0ea5e9';
+}
+
 // ─── Memoised product card ────────────────────────────────────────────────────
 const ProductCard = memo(({ p, qtyInCart, onAdd }: {
   p: Product; qtyInCart: number; onAdd: (p: Product) => void;
 }) => {
+  const [imageFailed, setImageFailed] = useState(false)
   const oos = p.stock === 0;
   const badge = stockBadge(p.stock);
+  const showImage = p.productImage && !imageFailed;
   return (
     <button
       disabled={oos}
@@ -186,6 +204,31 @@ const ProductCard = memo(({ p, qtyInCart, onAdd }: {
           width: 20, height: 20, borderRadius: '50%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>{qtyInCart}</span>
+      )}
+      {/* Colour avatar — consistent per product, looks intentional without an image */}
+      {showImage ? (
+        <img
+          src={p.productImage}
+          alt={p.productName}
+          style={{
+            width: '100%', height: 56, objectFit: 'cover',
+            borderRadius: 7, marginBottom: 7,
+          }}
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div style={{
+          width: '100%', height: 56, borderRadius: 7, marginBottom: 7,
+          background: stringToColorPOS(p.productName),
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <span style={{
+            fontSize: 28, fontWeight: 800, color: '#fff',
+            textTransform: 'uppercase', opacity: 0.9, userSelect: 'none',
+          }}>
+            {p.productName.trim().slice(0, 1)}
+          </span>
+        </div>
       )}
       <span style={{
         fontSize: 12.5, fontWeight: 600, color: '#0f172a', lineHeight: 1.3, marginBottom: 5,
@@ -263,7 +306,7 @@ const ChangeCal = memo(({ total, onChange }: { total: number; onChange: (v: numb
 export const NewSalePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -291,11 +334,14 @@ export const NewSalePage: React.FC = () => {
   const [sessRev, setSessRev] = useState(0);
   const [shiftStart, setShiftStart] = useState<Date>(() => new Date());
   const [now, setNow] = useState(Date.now());
+  const [storeName, setStoreName] = useState<string>('My Store');
 
   const searchRef = useRef<HTMLInputElement>(null);
   const backspaceCt = useRef(0);
   const backspaceTimer = useRef<ReturnType<typeof setTimeout>>();
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const [pendingMethod, setPendingMethod] = useState<string | null>(null);
 
   const auth = !!(user && ['OWNER', 'MANAGER', 'CASHIER'].includes(user.role));
 
@@ -344,12 +390,29 @@ export const NewSalePage: React.FC = () => {
   }, [auth, user?.id, user?.tenantId]);
 
   // Load categories once
+  // Load categories and store name once
   useEffect(() => {
     if (!token || !auth) return;
+
     apiClient.getCategories()
       .then((d: Category[]) => setCategories(Array.isArray(d) ? d : []))
       .catch(() => setCategories([]));
+
+    apiClient.request('/settings')
+      .then((data: any) => {
+        const name = data?.storeName || data?.data?.storeName || data?.storeSettings?.storeName;
+        if (name) setStoreName(name);
+      })
+      .catch(() => {
+        console.warn('[POS] Could not load store settings, using fallback store name');
+      });
   }, [token, auth]);
+  // useEffect(() => {
+  //   if (!token || !auth) return;
+  //   apiClient.getCategories()
+  //     .then((d: Category[]) => setCategories(Array.isArray(d) ? d : []))
+  //     .catch(() => setCategories([]));
+  // }, [token, auth]);
 
   // Product search with debounce
   const fetchProducts = useCallback(async (query = '') => {
@@ -417,6 +480,16 @@ export const NewSalePage: React.FC = () => {
 
   // Auto-focus on mount
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 80); }, []);
+
+  // When device transitions from online → offline, immediately re-fetch
+  // products from IndexedDB so the cashier isn't left with an empty screen.
+  // Without this, fetchProducts only runs on query/auth change — the offline
+  // fallback path never triggers on connectivity loss.
+  useEffect(() => {
+    if (!isOnline && auth) {
+      fetchProducts(q);
+    }
+  }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived
   const cartArr = useMemo(() => Array.from(cart.values()), [cart]);
@@ -547,6 +620,8 @@ export const NewSalePage: React.FC = () => {
         userId: user!.id,
         tenantId: user!.tenantId,
         createdAt: now,
+        customerName: note.trim() || null,
+        saleNote: null,
       };
 
       const saleEntity = {
@@ -579,15 +654,12 @@ export const NewSalePage: React.FC = () => {
       // IDB database so it cannot join this transaction, but placing the enqueue
       // here means it only runs when the transaction has already succeeded.
       tx.oncomplete = () => {
-        globalSyncQueue.enqueue(
-          localId,
-          'sale',
-          'CREATE',
-          salePayload,
-          0, // baseVersion: 0 — entity does not exist on server yet
-          1, // clientVersion: 1 — first local mutation
-        );
-        resolve(localId);
+        // enqueue is now async — must be handled inside oncomplete.
+        // If the queue persist fails, reject so handlePay shows the error
+        // toast rather than printing a receipt for a sale that isn't queued.
+        globalSyncQueue.enqueue(localId, 'sale', 'CREATE', salePayload, 0, 1)
+          .then(() => resolve(localId))
+          .catch((err) => reject(err));
       };
 
       // Step 1: write the sale record
@@ -642,6 +714,11 @@ export const NewSalePage: React.FC = () => {
   // Process payment — branches on connectivity
   const handlePay = async (method: string) => {
     if (!token || !user || processing || cart.size === 0) return;
+    // Credit sales require a customer name — cannot record a debt with no name
+    if (method === 'CREDIT' && !note.trim()) {
+      setError('Please enter the customer\'s name before charging to account.');
+      return;
+    }
     setProcessing(true); setError(null);
 
     const totals = {
@@ -662,11 +739,21 @@ export const NewSalePage: React.FC = () => {
           ...totals,
           method,
           cashier: user.name || user.email,
-          store: 'Danities Supermarket',
+          store: storeName || 'My Store Name',
           ts: new Date(),
           pendingSync: true,
+          customerName: note.trim() || null,
         };
         setDoneSale(done);
+        // Immediately mirror the IDB stock decrement into React state so the
+        // product grid updates without a page navigation or refresh.
+        setProducts(prev =>
+          prev.map(p => {
+            const soldItem = cartArr.find(ci => ci.id === p.id);
+            if (!soldItem) return p;
+            return { ...p, stock: Math.max(0, p.stock - soldItem.qty) };
+          })
+        );
         const offlineSales = sessSales + 1;
         const offlineRev = sessRev + totalAmt;
         setSessSales(offlineSales);
@@ -680,16 +767,31 @@ export const NewSalePage: React.FC = () => {
         const sale = await apiClient.createSale({
           paymentMethod: method,
           items: cartArr.map(i => ({ productId: i.id, quantity: i.qty, price: i.sellingPrice })),
+          customerName: note.trim() || null,
+          saleNote: null,
         });
         const done: DoneSale = {
           id: sale.id, items: cartArr,
           ...totals,
           method,
           cashier: user.name || user.email,
-          store: 'Danities Supermarket',
+          store: storeName,
           ts: new Date(),
           pendingSync: false,
+          customerName: note.trim() || null,
         };
+        // setDoneSale(done);
+        // console.log('[POS] Sale successful:', done);
+        // const onlineSales = sessSales + 1;
+        // const onlineRev = sessRev + totalAmt;
+        // setSessSales(onlineSales);
+        // setSessRev(onlineRev);
+        // persistDailySales(onlineSales, onlineRev, shiftStart);
+        // // Refetch products to update stock display in real-time
+        // await fetchProducts(q);
+        // clearCart(); setNote(''); setCartDisc(0); setAmtPaid(0);
+        // setProcessing(false); // Reset processing state after success
+        // setPayOpen(false); // Close payment modal
         setDoneSale(done);
         console.log('[POS] Sale successful:', done);
         const onlineSales = sessSales + 1;
@@ -697,6 +799,8 @@ export const NewSalePage: React.FC = () => {
         setSessSales(onlineSales);
         setSessRev(onlineRev);
         persistDailySales(onlineSales, onlineRev, shiftStart);
+        // Refetch products to update stock display in real-time
+        await fetchProducts(q);
         clearCart(); setNote(''); setCartDisc(0); setAmtPaid(0);
         setProcessing(false); // Reset processing state after success
         setPayOpen(false); // Close payment modal
@@ -848,7 +952,25 @@ export const NewSalePage: React.FC = () => {
         </button>
 
         {/* Exit */}
-        <button onClick={() => navigate('/dashboard')} style={{ background: '#1e293b', border: 'none', color: '#94a3b8', fontSize: 10.5, fontWeight: 600, padding: '4px 10px', borderRadius: 6, cursor: 'pointer' }}>
+        <button
+          type="button"
+          onClick={async (e) => {
+            // Prevent forms or parent handlers from interpreting this click as a submit
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Defensive check: ensure role comparison is string-based
+            const role = (user?.role || '').toString();
+            if (role === 'CASHIER') {
+              await logout();
+              return;
+            }
+
+            // Owners / managers go back to dashboard
+            navigate('/dashboard', { replace: true });
+          }}
+          style={{ background: '#1e293b', border: 'none', color: '#94a3b8', fontSize: 10.5, fontWeight: 600, padding: '4px 10px', borderRadius: 6, cursor: 'pointer' }}
+        >
           ✕ Exit
         </button>
       </div>
@@ -1035,8 +1157,21 @@ export const NewSalePage: React.FC = () => {
 
           {/* Footer */}
           <div style={{ borderTop: '1px solid #f1f5f9', padding: '10px 12px 12px', flexShrink: 0 }}>
-            <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Note / customer name…"
-              style={{ width: '100%', padding: '6px 10px', marginBottom: 8, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 12, color: '#475569', outline: 'none', background: '#f8fafc' }} />
+            <input
+              type="text"
+              value={note}
+              onChange={e => { setNote(e.target.value); if (pendingMethod) setPendingMethod(null); }}
+              placeholder={pendingMethod === 'CREDIT' ? '⚠ Enter customer name to charge to account…' : 'Note / customer name…'}
+              autoFocus={pendingMethod === 'CREDIT'}
+              style={{
+                width: '100%', padding: '6px 10px', marginBottom: 8,
+                border: pendingMethod === 'CREDIT' ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                borderRadius: 8, fontSize: 12, color: '#475569', outline: 'none',
+                background: pendingMethod === 'CREDIT' ? '#fff5f5' : '#f8fafc',
+                transition: 'border .15s, background .15s',
+              }}
+            />
+
 
             {/* Cart discount */}
             <div style={{ ...F, alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -1108,7 +1243,15 @@ export const NewSalePage: React.FC = () => {
             {/* Methods */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               {PAY.map(m => (
-                <button key={m.id} onClick={() => handlePay(m.id)}
+                <button key={m.id} onClick={() => {
+                  if (m.id === 'CREDIT' && !note.trim()) {
+                    setPendingMethod('CREDIT');
+                    setPayOpen(false); // Close payment modal, return to cart
+                    setError('Enter the customer name in the note field, then tap "Owe Me" again.');
+                    return;
+                  }
+                  handlePay(m.id);
+                }}
                   style={{ padding: '14px 10px', borderRadius: 14, border: `1.5px solid ${m.col}33`, background: m.col + '0E', color: m.col, cursor: 'pointer', textAlign: 'center', transition: 'background .12s', position: 'relative' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = m.col + '22'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = m.col + '0E'; }}>
@@ -1147,6 +1290,11 @@ export const NewSalePage: React.FC = () => {
               <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
                 #{doneSale.id.slice(0, 8).toUpperCase()} · {doneSale.ts.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' })}
               </p>
+              {doneSale.customerName && (
+                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                  Customer: {doneSale.customerName}
+                </p>
+              )}
             </div>
 
             {/* Pending sync banner — shown when sale was saved offline */}
@@ -1163,7 +1311,7 @@ export const NewSalePage: React.FC = () => {
             <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 18 }}>
               {([
                 { l: 'Subtotal', v: N(doneSale.sub) },
-                { l: 'VAT (7.5%)', v: N(doneSale.vat) },
+                ...(doneSale.vat > 0 ? [{ l: 'VAT', v: N(doneSale.vat) }] : []),
                 { l: 'Total', v: N(doneSale.total), bold: true, c: GOLD },
                 { l: 'Paid via', v: doneSale.method },
                 ...(doneSale.change > 0 ? [{ l: 'Change', v: N(doneSale.change), c: '#16a34a', bold: false }] : []),

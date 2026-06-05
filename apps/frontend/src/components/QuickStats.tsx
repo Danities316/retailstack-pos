@@ -20,7 +20,8 @@ interface StatsProps {
     totalSales: string
     transactions: number
     avgSale: string
-    compareYesterday: string
+    compareYesterday: string,
+    taxCollected: string
   }
 }
 
@@ -311,12 +312,11 @@ export const QuickStats = ({ stats }: StatsProps) => {
   const avgFormatted = formatNaira(rawAvg)
 
   // Parse tax: derive from total if not given
-  const totalNum = parseFloat(String(rawTotal).replace(/[^0-9.]/g, '')) || 0
-  const taxNum = totalNum * 0.075  // 7.5% VAT — Nigerian standard
-  const taxFormatted = formatNaira(taxNum)
+  const taxCollected = parseFloat(String(stats.taxCollected).replace(/[^0-9.]/g, '')) || 0
+  const taxFormatted = formatNaira(taxCollected)
 
   // Gross profit proxy: assume ~40% margin typical for Nigerian SMB retail
-  const grossProfitFormatted = formatNaira(totalNum * 0.40)
+  const grossProfitFormatted = formatNaira(taxCollected * 0.40)
 
   // Parse trend
   const trendRaw = stats.compareYesterday || '0%'
@@ -355,9 +355,9 @@ export const QuickStats = ({ stats }: StatsProps) => {
       accentColor: '#7c3aed',
     },
     {
-      title: 'VAT Collected (7.5%)',
+      title: 'Tax Collected',
       value: taxFormatted,
-      subValue: 'FIRS-standard rate',
+      subValue: taxCollected > 0 ? 'From VAT-enabled sales' : 'VAT not enabled',
       icon: <PercentIcon size={18} />,
       iconBg: '#ea580c18',
       iconColor: '#ea580c',

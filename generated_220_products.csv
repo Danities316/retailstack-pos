@@ -1,0 +1,221 @@
+sku,product_name,category,brand,description,retail_price,cost_price,stock_quantity,reorder_point,barcode,status
+SKU-1000,HomeEase Product 1,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,435133,247618.77,147,22,10020000,active
+SKU-1001,UrbanStyle Product 2,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,32829,18360.25,124,5,10020001,active
+SKU-1002,Crispy Co Product 3,Snacks,Crispy Co,High quality snacks item from Crispy Co.,175406,133761.33,128,23,10020002,active
+SKU-1003,HomeEase Product 4,Electronics,HomeEase,High quality electronics item from HomeEase.,156129,92195.3,192,15,10020003,active
+SKU-1004,Adino Wear Product 5,Electronics,Adino Wear,High quality electronics item from Adino Wear.,473021,369497.42,65,8,10020004,active
+SKU-1005,FreshFarm Product 6,Women's Apparel,FreshFarm,High quality women's apparel item from FreshFarm.,441426,299048.33,68,13,10020005,active
+SKU-1006,Crispy Co Product 7,Electronics,Crispy Co,High quality electronics item from Crispy Co.,290093,159136.9,204,17,10020006,active
+SKU-1007,FreshFarm Product 8,Electronics,FreshFarm,High quality electronics item from FreshFarm.,72896,52619.82,82,17,10020007,active
+SKU-1008,Tech Corp Product 9,Groceries,Tech Corp,High quality groceries item from Tech Corp.,288393,216452.3,62,27,10020008,active
+SKU-1009,HomeEase Product 10,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,480627,244738.84,199,12,10020009,active
+SKU-1010,UrbanStyle Product 11,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,62522,49848.66,83,9,10020010,active
+SKU-1011,UrbanStyle Product 12,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,102843,52723.32,212,16,10020011,active
+SKU-1012,Crispy Co Product 13,Electronics,Crispy Co,High quality electronics item from Crispy Co.,215882,155439.75,54,8,10020012,active
+SKU-1013,Adino Wear Product 14,Men's Apparel,Adino Wear,High quality men's apparel item from Adino Wear.,37185,29098.9,164,29,10020013,active
+SKU-1014,NaijaGoods Product 15,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,278786,205243.37,176,20,10020014,active
+SKU-1015,Adino Wear Product 16,Men's Apparel,Adino Wear,High quality men's apparel item from Adino Wear.,484099,276532.18,44,30,10020015,active
+SKU-1016,FreshFarm Product 17,Men's Apparel,FreshFarm,High quality men's apparel item from FreshFarm.,391698,305383.42,276,14,10020016,active
+SKU-1017,NaijaGoods Product 18,Home & Kitchen,NaijaGoods,High quality home & kitchen item from NaijaGoods.,204458,126877.38,203,30,10020017,active
+SKU-1018,Tech Corp Product 19,Electronics,Tech Corp,High quality electronics item from Tech Corp.,252728,151908.95,178,5,10020018,active
+SKU-1019,Adino Wear Product 20,Home & Kitchen,Adino Wear,High quality home & kitchen item from Adino Wear.,20197,13173.33,258,22,10020019,active
+SKU-1020,HomeEase Product 21,Electronics,HomeEase,High quality electronics item from HomeEase.,140817,107512.48,119,20,10020020,active
+SKU-1021,Tech Corp Product 22,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,28934,20918.57,87,23,10020021,active
+SKU-1022,FreshFarm Product 23,Groceries,FreshFarm,High quality groceries item from FreshFarm.,126019,67612.26,235,7,10020022,active
+SKU-1023,NaijaGoods Product 24,Electronics,NaijaGoods,High quality electronics item from NaijaGoods.,251795,139091.91,60,30,10020023,active
+SKU-1024,UrbanStyle Product 25,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,432620,242098.66,11,8,10020024,active
+SKU-1025,Adino Wear Product 26,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,350445,184493.25,72,20,10020025,active
+SKU-1026,Adino Wear Product 27,Snacks,Adino Wear,High quality snacks item from Adino Wear.,334994,228359.7,32,14,10020026,active
+SKU-1027,HomeEase Product 28,Electronics,HomeEase,High quality electronics item from HomeEase.,497717,271607.66,98,17,10020027,active
+SKU-1028,HomeEase Product 29,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,289209,180811.95,260,15,10020028,active
+SKU-1029,NaijaGoods Product 30,Home & Kitchen,NaijaGoods,High quality home & kitchen item from NaijaGoods.,352395,236872.7,207,15,10020029,active
+SKU-1030,FreshFarm Product 31,Groceries,FreshFarm,High quality groceries item from FreshFarm.,375913,232281.36,114,11,10020030,active
+SKU-1031,Adino Wear Product 32,Electronics,Adino Wear,High quality electronics item from Adino Wear.,388820,199427.87,115,27,10020031,active
+SKU-1032,Tech Corp Product 33,Beverages,Tech Corp,High quality beverages item from Tech Corp.,469590,370233.34,107,26,10020032,active
+SKU-1033,Crispy Co Product 34,Beverages,Crispy Co,High quality beverages item from Crispy Co.,156206,111343.54,95,20,10020033,active
+SKU-1034,NaijaGoods Product 35,Home & Kitchen,NaijaGoods,High quality home & kitchen item from NaijaGoods.,341851,198477.75,178,11,10020034,active
+SKU-1035,Adino Wear Product 36,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,151478,82638.14,29,29,10020035,active
+SKU-1036,FreshFarm Product 37,Men's Apparel,FreshFarm,High quality men's apparel item from FreshFarm.,257179,195610.23,242,27,10020036,active
+SKU-1037,UrbanStyle Product 38,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,155294,117058.8,195,30,10020037,active
+SKU-1038,HomeEase Product 39,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,47458,35608.59,74,8,10020038,active
+SKU-1039,HomeEase Product 40,Beverages,HomeEase,High quality beverages item from HomeEase.,223793,176783.64,154,21,10020039,active
+SKU-1040,FreshFarm Product 41,Groceries,FreshFarm,High quality groceries item from FreshFarm.,466683,237825.03,171,23,10020040,active
+SKU-1041,NaijaGoods Product 42,Men's Apparel,NaijaGoods,High quality men's apparel item from NaijaGoods.,223530,173719.67,24,21,10020041,active
+SKU-1042,HomeEase Product 43,Snacks,HomeEase,High quality snacks item from HomeEase.,164280,131308.3,287,9,10020042,active
+SKU-1043,FreshFarm Product 44,Groceries,FreshFarm,High quality groceries item from FreshFarm.,395505,219163.08,34,6,10020043,active
+SKU-1044,HomeEase Product 45,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,110540,55644.24,262,26,10020044,active
+SKU-1045,Crispy Co Product 46,Snacks,Crispy Co,High quality snacks item from Crispy Co.,386180,231044.6,178,9,10020045,active
+SKU-1046,Tech Corp Product 47,Snacks,Tech Corp,High quality snacks item from Tech Corp.,112752,71297.59,128,6,10020046,active
+SKU-1047,HomeEase Product 48,Electronics,HomeEase,High quality electronics item from HomeEase.,180064,117725.22,134,8,10020047,active
+SKU-1048,Adino Wear Product 49,Beverages,Adino Wear,High quality beverages item from Adino Wear.,372729,214693.29,165,14,10020048,active
+SKU-1049,Crispy Co Product 50,Women's Apparel,Crispy Co,High quality women's apparel item from Crispy Co.,252937,161488.69,263,25,10020049,active
+SKU-1050,HomeEase Product 51,Women's Apparel,HomeEase,High quality women's apparel item from HomeEase.,94847,62016.09,44,6,10020050,active
+SKU-1051,Adino Wear Product 52,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,294628,152950.15,209,18,10020051,active
+SKU-1052,Crispy Co Product 53,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,226489,123821.05,232,23,10020052,active
+SKU-1053,Adino Wear Product 54,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,106299,83792.49,103,19,10020053,active
+SKU-1054,Tech Corp Product 55,Electronics,Tech Corp,High quality electronics item from Tech Corp.,402453,304880.06,250,13,10020054,active
+SKU-1055,NaijaGoods Product 56,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,81598,64905.09,159,22,10020055,active
+SKU-1056,Crispy Co Product 57,Snacks,Crispy Co,High quality snacks item from Crispy Co.,372213,254337.74,217,9,10020056,active
+SKU-1057,NaijaGoods Product 58,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,49230,33354.28,24,17,10020057,active
+SKU-1058,UrbanStyle Product 59,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,304224,204266.48,22,17,10020058,active
+SKU-1059,UrbanStyle Product 60,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,338492,214025.51,134,27,10020059,active
+SKU-1060,UrbanStyle Product 61,Beverages,UrbanStyle,High quality beverages item from UrbanStyle.,291360,170161.49,147,12,10020060,active
+SKU-1061,HomeEase Product 62,Groceries,HomeEase,High quality groceries item from HomeEase.,34476,18342.94,13,17,10020061,active
+SKU-1062,HomeEase Product 63,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,274513,208485.23,64,6,10020062,active
+SKU-1063,Tech Corp Product 64,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,109375,78587.57,156,25,10020063,active
+SKU-1064,HomeEase Product 65,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,233116,123236.34,34,9,10020064,active
+SKU-1065,NaijaGoods Product 66,Home & Kitchen,NaijaGoods,High quality home & kitchen item from NaijaGoods.,249034,136938.9,159,20,10020065,active
+SKU-1066,Crispy Co Product 67,Women's Apparel,Crispy Co,High quality women's apparel item from Crispy Co.,82482,45394.06,103,6,10020066,active
+SKU-1067,Tech Corp Product 68,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,339731,265719.11,275,25,10020067,active
+SKU-1068,UrbanStyle Product 69,Women's Apparel,UrbanStyle,High quality women's apparel item from UrbanStyle.,323456,172516.68,267,7,10020068,active
+SKU-1069,Crispy Co Product 70,Groceries,Crispy Co,High quality groceries item from Crispy Co.,122737,69302.36,90,8,10020069,active
+SKU-1070,Adino Wear Product 71,Snacks,Adino Wear,High quality snacks item from Adino Wear.,313781,178582.95,99,12,10020070,active
+SKU-1071,HomeEase Product 72,Groceries,HomeEase,High quality groceries item from HomeEase.,376622,222518.62,79,29,10020071,active
+SKU-1072,HomeEase Product 73,Electronics,HomeEase,High quality electronics item from HomeEase.,33847,19707.19,282,16,10020072,active
+SKU-1073,Tech Corp Product 74,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,430945,328168.62,242,6,10020073,active
+SKU-1074,NaijaGoods Product 75,Electronics,NaijaGoods,High quality electronics item from NaijaGoods.,114261,90679.79,232,15,10020074,active
+SKU-1075,UrbanStyle Product 76,Women's Apparel,UrbanStyle,High quality women's apparel item from UrbanStyle.,357250,180013.95,122,13,10020075,active
+SKU-1076,Adino Wear Product 77,Home & Kitchen,Adino Wear,High quality home & kitchen item from Adino Wear.,386897,305046.17,31,23,10020076,active
+SKU-1077,Crispy Co Product 78,Snacks,Crispy Co,High quality snacks item from Crispy Co.,388993,292856.08,300,15,10020077,active
+SKU-1078,UrbanStyle Product 79,Women's Apparel,UrbanStyle,High quality women's apparel item from UrbanStyle.,434515,298226.86,274,21,10020078,active
+SKU-1079,UrbanStyle Product 80,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,151889,87273.86,93,12,10020079,active
+SKU-1080,UrbanStyle Product 81,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,436279,278401.64,28,14,10020080,active
+SKU-1081,HomeEase Product 82,Snacks,HomeEase,High quality snacks item from HomeEase.,101776,59459.91,137,29,10020081,active
+SKU-1082,FreshFarm Product 83,Snacks,FreshFarm,High quality snacks item from FreshFarm.,244760,168635.18,81,27,10020082,active
+SKU-1083,HomeEase Product 84,Snacks,HomeEase,High quality snacks item from HomeEase.,268515,173007.87,242,11,10020083,active
+SKU-1084,Tech Corp Product 85,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,273046,204913.32,176,12,10020084,active
+SKU-1085,Tech Corp Product 86,Snacks,Tech Corp,High quality snacks item from Tech Corp.,484247,333153.65,255,28,10020085,active
+SKU-1086,UrbanStyle Product 87,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,145173,87410.6,166,14,10020086,active
+SKU-1087,UrbanStyle Product 88,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,387809,207261.61,134,19,10020087,active
+SKU-1088,Adino Wear Product 89,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,119622,74191.84,284,10,10020088,active
+SKU-1089,NaijaGoods Product 90,Beverages,NaijaGoods,High quality beverages item from NaijaGoods.,350292,263250.16,203,9,10020089,active
+SKU-1090,UrbanStyle Product 91,Home & Kitchen,UrbanStyle,High quality home & kitchen item from UrbanStyle.,156452,121983.89,80,21,10020090,active
+SKU-1091,Adino Wear Product 92,Men's Apparel,Adino Wear,High quality men's apparel item from Adino Wear.,391709,213566.01,187,23,10020091,active
+SKU-1092,UrbanStyle Product 93,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,37303,28361.37,129,15,10020092,active
+SKU-1093,Tech Corp Product 94,Groceries,Tech Corp,High quality groceries item from Tech Corp.,93050,62652.86,187,16,10020093,active
+SKU-1094,Tech Corp Product 95,Snacks,Tech Corp,High quality snacks item from Tech Corp.,302822,171396.57,133,12,10020094,active
+SKU-1095,Adino Wear Product 96,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,19034,13768.06,220,7,10020095,active
+SKU-1096,UrbanStyle Product 97,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,290551,181007.93,128,28,10020096,active
+SKU-1097,Crispy Co Product 98,Groceries,Crispy Co,High quality groceries item from Crispy Co.,484938,291749.2,44,20,10020097,active
+SKU-1098,HomeEase Product 99,Groceries,HomeEase,High quality groceries item from HomeEase.,492365,373490.74,136,28,10020098,active
+SKU-1099,Crispy Co Product 100,Electronics,Crispy Co,High quality electronics item from Crispy Co.,245317,156909.1,232,12,10020099,active
+SKU-1100,Tech Corp Product 101,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,235247,171180.18,12,9,10020100,active
+SKU-1101,HomeEase Product 102,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,78457,47838.88,116,28,10020101,active
+SKU-1102,UrbanStyle Product 103,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,81772,56712.31,204,10,10020102,active
+SKU-1103,Tech Corp Product 104,Groceries,Tech Corp,High quality groceries item from Tech Corp.,378879,223086.12,238,7,10020103,active
+SKU-1104,HomeEase Product 105,Beverages,HomeEase,High quality beverages item from HomeEase.,118418,94168.29,87,5,10020104,active
+SKU-1105,Crispy Co Product 106,Women's Apparel,Crispy Co,High quality women's apparel item from Crispy Co.,233219,152129.78,233,14,10020105,active
+SKU-1106,NaijaGoods Product 107,Women's Apparel,NaijaGoods,High quality women's apparel item from NaijaGoods.,44339,22309.3,50,30,10020106,active
+SKU-1107,UrbanStyle Product 108,Home & Kitchen,UrbanStyle,High quality home & kitchen item from UrbanStyle.,159535,114717.61,68,25,10020107,active
+SKU-1108,HomeEase Product 109,Snacks,HomeEase,High quality snacks item from HomeEase.,156827,104507.47,289,25,10020108,active
+SKU-1109,HomeEase Product 110,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,232048,159076.6,151,30,10020109,active
+SKU-1110,NaijaGoods Product 111,Snacks,NaijaGoods,High quality snacks item from NaijaGoods.,474046,259682.47,30,18,10020110,active
+SKU-1111,HomeEase Product 112,Groceries,HomeEase,High quality groceries item from HomeEase.,135091,75326.86,203,28,10020111,active
+SKU-1112,NaijaGoods Product 113,Women's Apparel,NaijaGoods,High quality women's apparel item from NaijaGoods.,350780,231581.9,110,23,10020112,active
+SKU-1113,Tech Corp Product 114,Snacks,Tech Corp,High quality snacks item from Tech Corp.,321555,213301.9,173,7,10020113,active
+SKU-1114,UrbanStyle Product 115,Women's Apparel,UrbanStyle,High quality women's apparel item from UrbanStyle.,63049,33453.32,207,6,10020114,active
+SKU-1115,HomeEase Product 116,Groceries,HomeEase,High quality groceries item from HomeEase.,482155,258853.02,46,15,10020115,active
+SKU-1116,HomeEase Product 117,Snacks,HomeEase,High quality snacks item from HomeEase.,309784,165991.61,112,25,10020116,active
+SKU-1117,Adino Wear Product 118,Beverages,Adino Wear,High quality beverages item from Adino Wear.,233573,124983.38,272,8,10020117,active
+SKU-1118,Crispy Co Product 119,Electronics,Crispy Co,High quality electronics item from Crispy Co.,282557,188166.34,243,12,10020118,active
+SKU-1119,Tech Corp Product 120,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,21931,16678.86,209,5,10020119,active
+SKU-1120,HomeEase Product 121,Snacks,HomeEase,High quality snacks item from HomeEase.,285450,172995.89,248,21,10020120,active
+SKU-1121,NaijaGoods Product 122,Beverages,NaijaGoods,High quality beverages item from NaijaGoods.,441116,279294.49,185,30,10020121,active
+SKU-1122,Adino Wear Product 123,Groceries,Adino Wear,High quality groceries item from Adino Wear.,482255,281491.68,208,16,10020122,active
+SKU-1123,FreshFarm Product 124,Electronics,FreshFarm,High quality electronics item from FreshFarm.,57305,39228.31,236,9,10020123,active
+SKU-1124,HomeEase Product 125,Groceries,HomeEase,High quality groceries item from HomeEase.,336665,224444.57,127,7,10020124,active
+SKU-1125,FreshFarm Product 126,Snacks,FreshFarm,High quality snacks item from FreshFarm.,150131,89028.85,39,28,10020125,active
+SKU-1126,Adino Wear Product 127,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,272912,143939.64,276,5,10020126,active
+SKU-1127,Tech Corp Product 128,Beverages,Tech Corp,High quality beverages item from Tech Corp.,379620,191147.56,88,7,10020127,active
+SKU-1128,Adino Wear Product 129,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,209375,124025.45,233,27,10020128,active
+SKU-1129,HomeEase Product 130,Beverages,HomeEase,High quality beverages item from HomeEase.,224736,112844.55,239,24,10020129,active
+SKU-1130,Adino Wear Product 131,Men's Apparel,Adino Wear,High quality men's apparel item from Adino Wear.,258308,131277.21,188,24,10020130,active
+SKU-1131,Tech Corp Product 132,Snacks,Tech Corp,High quality snacks item from Tech Corp.,266715,150131.4,20,6,10020131,active
+SKU-1132,NaijaGoods Product 133,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,335622,218632.8,167,16,10020132,active
+SKU-1133,HomeEase Product 134,Women's Apparel,HomeEase,High quality women's apparel item from HomeEase.,38129,26462.82,123,16,10020133,active
+SKU-1134,HomeEase Product 135,Groceries,HomeEase,High quality groceries item from HomeEase.,347125,179966.67,193,27,10020134,active
+SKU-1135,UrbanStyle Product 136,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,185238,126270.27,274,27,10020135,active
+SKU-1136,NaijaGoods Product 137,Men's Apparel,NaijaGoods,High quality men's apparel item from NaijaGoods.,408955,242856.31,81,20,10020136,active
+SKU-1137,UrbanStyle Product 138,Men's Apparel,UrbanStyle,High quality men's apparel item from UrbanStyle.,38962,25350.3,232,6,10020137,active
+SKU-1138,FreshFarm Product 139,Home & Kitchen,FreshFarm,High quality home & kitchen item from FreshFarm.,313374,199151.91,169,19,10020138,active
+SKU-1139,UrbanStyle Product 140,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,309442,241359.24,56,30,10020139,active
+SKU-1140,NaijaGoods Product 141,Snacks,NaijaGoods,High quality snacks item from NaijaGoods.,69273,48311.87,37,8,10020140,active
+SKU-1141,Adino Wear Product 142,Men's Apparel,Adino Wear,High quality men's apparel item from Adino Wear.,402803,253375.79,274,21,10020141,active
+SKU-1142,UrbanStyle Product 143,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,63698,34607.48,189,30,10020142,active
+SKU-1143,NaijaGoods Product 144,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,230011,122313.62,48,15,10020143,active
+SKU-1144,FreshFarm Product 145,Women's Apparel,FreshFarm,High quality women's apparel item from FreshFarm.,333980,188758.51,102,23,10020144,active
+SKU-1145,Adino Wear Product 146,Beverages,Adino Wear,High quality beverages item from Adino Wear.,444570,343123.3,15,17,10020145,active
+SKU-1146,NaijaGoods Product 147,Electronics,NaijaGoods,High quality electronics item from NaijaGoods.,157423,100741.89,78,27,10020146,active
+SKU-1147,HomeEase Product 148,Snacks,HomeEase,High quality snacks item from HomeEase.,319200,185648.56,209,22,10020147,active
+SKU-1148,Tech Corp Product 149,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,58081,39976.48,229,27,10020148,active
+SKU-1149,FreshFarm Product 150,Snacks,FreshFarm,High quality snacks item from FreshFarm.,280119,215115.69,55,21,10020149,active
+SKU-1150,Crispy Co Product 151,Snacks,Crispy Co,High quality snacks item from Crispy Co.,484663,355755.91,36,11,10020150,active
+SKU-1151,Crispy Co Product 152,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,211123,119703.76,285,18,10020151,active
+SKU-1152,Tech Corp Product 153,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,432738,226263.11,166,13,10020152,active
+SKU-1153,Adino Wear Product 154,Women's Apparel,Adino Wear,High quality women's apparel item from Adino Wear.,130942,74092.92,77,21,10020153,active
+SKU-1154,Crispy Co Product 155,Men's Apparel,Crispy Co,High quality men's apparel item from Crispy Co.,412774,229976.05,197,15,10020154,active
+SKU-1155,NaijaGoods Product 156,Beverages,NaijaGoods,High quality beverages item from NaijaGoods.,200560,125196.74,26,13,10020155,active
+SKU-1156,Crispy Co Product 157,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,57426,40007.91,128,20,10020156,active
+SKU-1157,Crispy Co Product 158,Beverages,Crispy Co,High quality beverages item from Crispy Co.,92552,68374.48,225,24,10020157,active
+SKU-1158,NaijaGoods Product 159,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,279236,179031.2,243,22,10020158,active
+SKU-1159,Tech Corp Product 160,Beverages,Tech Corp,High quality beverages item from Tech Corp.,37468,24607.18,286,7,10020159,active
+SKU-1160,UrbanStyle Product 161,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,264418,159368.37,217,26,10020160,active
+SKU-1161,HomeEase Product 162,Beverages,HomeEase,High quality beverages item from HomeEase.,304159,207840.89,150,20,10020161,active
+SKU-1162,HomeEase Product 163,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,477470,271180.99,177,22,10020162,active
+SKU-1163,HomeEase Product 164,Beverages,HomeEase,High quality beverages item from HomeEase.,499301,328166.64,224,11,10020163,active
+SKU-1164,UrbanStyle Product 165,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,317187,247568.26,187,21,10020164,active
+SKU-1165,Crispy Co Product 166,Beverages,Crispy Co,High quality beverages item from Crispy Co.,382950,239865.25,247,29,10020165,active
+SKU-1166,NaijaGoods Product 167,Electronics,NaijaGoods,High quality electronics item from NaijaGoods.,270095,189529.14,10,26,10020166,active
+SKU-1167,Crispy Co Product 168,Women's Apparel,Crispy Co,High quality women's apparel item from Crispy Co.,216793,112713.09,228,6,10020167,active
+SKU-1168,NaijaGoods Product 169,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,62452,49214.68,153,11,10020168,active
+SKU-1169,Crispy Co Product 170,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,167891,128486.59,57,5,10020169,active
+SKU-1170,FreshFarm Product 171,Home & Kitchen,FreshFarm,High quality home & kitchen item from FreshFarm.,157671,116272.93,157,6,10020170,active
+SKU-1171,FreshFarm Product 172,Snacks,FreshFarm,High quality snacks item from FreshFarm.,96463,69933.67,135,5,10020171,active
+SKU-1172,HomeEase Product 173,Electronics,HomeEase,High quality electronics item from HomeEase.,470682,271311.73,62,10,10020172,active
+SKU-1173,Crispy Co Product 174,Groceries,Crispy Co,High quality groceries item from Crispy Co.,445233,327679.82,216,18,10020173,active
+SKU-1174,NaijaGoods Product 175,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,156300,93311.35,96,15,10020174,active
+SKU-1175,HomeEase Product 176,Home & Kitchen,HomeEase,High quality home & kitchen item from HomeEase.,95781,64407.08,277,29,10020175,active
+SKU-1176,Crispy Co Product 177,Electronics,Crispy Co,High quality electronics item from Crispy Co.,126929,79745.13,165,11,10020176,active
+SKU-1177,Crispy Co Product 178,Snacks,Crispy Co,High quality snacks item from Crispy Co.,463913,323292.43,137,24,10020177,active
+SKU-1178,UrbanStyle Product 179,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,458775,331142.54,11,23,10020178,active
+SKU-1179,Tech Corp Product 180,Snacks,Tech Corp,High quality snacks item from Tech Corp.,63419,46281.02,43,25,10020179,active
+SKU-1180,HomeEase Product 181,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,87613,67574.18,291,29,10020180,active
+SKU-1181,HomeEase Product 182,Beverages,HomeEase,High quality beverages item from HomeEase.,16907,10384.11,296,15,10020181,active
+SKU-1182,UrbanStyle Product 183,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,447629,346684.74,204,10,10020182,active
+SKU-1183,Crispy Co Product 184,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,47884,25226.01,37,24,10020183,active
+SKU-1184,Crispy Co Product 185,Men's Apparel,Crispy Co,High quality men's apparel item from Crispy Co.,350610,203541.6,134,30,10020184,active
+SKU-1185,Crispy Co Product 186,Electronics,Crispy Co,High quality electronics item from Crispy Co.,82521,42587.66,23,28,10020185,active
+SKU-1186,NaijaGoods Product 187,Groceries,NaijaGoods,High quality groceries item from NaijaGoods.,177969,107244.47,236,26,10020186,active
+SKU-1187,FreshFarm Product 188,Beverages,FreshFarm,High quality beverages item from FreshFarm.,19094,12509.22,297,8,10020187,active
+SKU-1188,Tech Corp Product 189,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,116373,87972.05,83,22,10020188,active
+SKU-1189,Crispy Co Product 190,Groceries,Crispy Co,High quality groceries item from Crispy Co.,159756,125567.25,57,10,10020189,active
+SKU-1190,UrbanStyle Product 191,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,322349,246735.39,222,18,10020190,active
+SKU-1191,FreshFarm Product 192,Electronics,FreshFarm,High quality electronics item from FreshFarm.,7343,5243.85,161,8,10020191,active
+SKU-1192,HomeEase Product 193,Groceries,HomeEase,High quality groceries item from HomeEase.,432982,223210.41,50,5,10020192,active
+SKU-1193,FreshFarm Product 194,Women's Apparel,FreshFarm,High quality women's apparel item from FreshFarm.,357639,270052.94,293,9,10020193,active
+SKU-1194,HomeEase Product 195,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,465465,322816.2,189,12,10020194,active
+SKU-1195,Crispy Co Product 196,Snacks,Crispy Co,High quality snacks item from Crispy Co.,153902,122416.36,16,13,10020195,active
+SKU-1196,UrbanStyle Product 197,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,128070,96819.46,162,5,10020196,active
+SKU-1197,Tech Corp Product 198,Home & Kitchen,Tech Corp,High quality home & kitchen item from Tech Corp.,156599,118420.02,269,18,10020197,active
+SKU-1198,HomeEase Product 199,Women's Apparel,HomeEase,High quality women's apparel item from HomeEase.,340273,187909.82,256,25,10020198,active
+SKU-1199,Tech Corp Product 200,Men's Apparel,Tech Corp,High quality men's apparel item from Tech Corp.,345305,173023.31,127,29,10020199,active
+SKU-1200,FreshFarm Product 201,Beverages,FreshFarm,High quality beverages item from FreshFarm.,364087,189513.98,98,11,10020200,active
+SKU-1201,UrbanStyle Product 202,Snacks,UrbanStyle,High quality snacks item from UrbanStyle.,349597,237783.74,214,12,10020201,active
+SKU-1202,UrbanStyle Product 203,Home & Kitchen,UrbanStyle,High quality home & kitchen item from UrbanStyle.,450903,226558.72,88,28,10020202,active
+SKU-1203,UrbanStyle Product 204,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,274217,168582.68,29,18,10020203,active
+SKU-1204,HomeEase Product 205,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,358384,245186.47,243,15,10020204,active
+SKU-1205,HomeEase Product 206,Men's Apparel,HomeEase,High quality men's apparel item from HomeEase.,430274,304037.48,122,10,10020205,active
+SKU-1206,UrbanStyle Product 207,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,230374,163108.2,19,12,10020206,active
+SKU-1207,Crispy Co Product 208,Beverages,Crispy Co,High quality beverages item from Crispy Co.,470320,245991.22,48,28,10020207,active
+SKU-1208,UrbanStyle Product 209,Electronics,UrbanStyle,High quality electronics item from UrbanStyle.,317598,213360.99,84,18,10020208,active
+SKU-1209,Tech Corp Product 210,Beverages,Tech Corp,High quality beverages item from Tech Corp.,365116,196146.59,233,6,10020209,active
+SKU-1210,Tech Corp Product 211,Women's Apparel,Tech Corp,High quality women's apparel item from Tech Corp.,364466,185382.7,213,23,10020210,active
+SKU-1211,Crispy Co Product 212,Men's Apparel,Crispy Co,High quality men's apparel item from Crispy Co.,368616,239390.94,234,9,10020211,active
+SKU-1212,UrbanStyle Product 213,Groceries,UrbanStyle,High quality groceries item from UrbanStyle.,461712,280670.58,134,9,10020212,active
+SKU-1213,Crispy Co Product 214,Home & Kitchen,Crispy Co,High quality home & kitchen item from Crispy Co.,310573,205759.18,31,16,10020213,active
+SKU-1214,Adino Wear Product 215,Snacks,Adino Wear,High quality snacks item from Adino Wear.,312099,157878.3,201,23,10020214,active
+SKU-1215,HomeEase Product 216,Women's Apparel,HomeEase,High quality women's apparel item from HomeEase.,62228,42449.29,191,6,10020215,active
+SKU-1216,Tech Corp Product 217,Men's Apparel,Tech Corp,High quality men's apparel item from Tech Corp.,125816,72261.14,189,8,10020216,active
+SKU-1217,FreshFarm Product 218,Snacks,FreshFarm,High quality snacks item from FreshFarm.,91122,66041.24,298,20,10020217,active
+SKU-1218,Tech Corp Product 219,Beverages,Tech Corp,High quality beverages item from Tech Corp.,286220,189083.04,280,5,10020218,active
+SKU-1219,Adino Wear Product 220,Beverages,Adino Wear,High quality beverages item from Adino Wear.,233690,174359.79,190,24,10020219,active

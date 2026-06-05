@@ -4,7 +4,7 @@
  */
 
 import { OfflineEntity } from '../domain/OfflineEntity';
-import { SyncQueue } from './SyncQueue';
+import { SyncQueue } from '../offline/SyncQueue';
 
 export interface PullResponse {
     serverTime: string; // ISO 8601
@@ -200,13 +200,3 @@ async function applyServerChange(
     }
 }
 
-/**
- * Helper: get from object store.
- */
-function getFromStore(store: IDBObjectStore, id: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const request = store.get(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}

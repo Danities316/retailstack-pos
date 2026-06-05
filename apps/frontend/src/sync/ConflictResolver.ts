@@ -85,8 +85,17 @@ export class ConflictResolver {
             case 'MERGE':
                 resolved = this.merge(clientData, serverData, rule.preserveFields);
                 break;
-
+            default:
+                resolved = serverData;
+                break;
         }
+
+        return {
+            resolved,
+            strategy: rule.strategy,
+            requiresManualReview: false,
+        };
+    }
 
     /**
      * Client wins: client changes override server, but preserve designated fields.

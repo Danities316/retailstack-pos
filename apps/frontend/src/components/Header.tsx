@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 interface HeaderProps {
   toggleSidebar: () => void
   isSidebarOpen: boolean
-  storeName: string
+  storeName?: string
 }
 
 export const Header = ({
@@ -54,7 +54,7 @@ export const Header = ({
           <MenuIcon size={20} />
         </button>
         {/* Store Name */}
-        <span className="text-xl font-bold text-blue-600 mx-4">{storeName}</span>
+        <span className="text-xl font-bold text-blue-600 mx-4"> Adino POS - {storeName || 'Store Name'}</span>
       </div>
       {/* Centered Search Bar */}
       <div className="flex-1 flex justify-center px-6 md:px-0">

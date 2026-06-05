@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -7,7 +7,7 @@ import { Mail, Lock, LogIn, Loader2, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Image1 from '../assets/images/logo4.png';
 import Image2 from '../assets/images/POS.png';
-import { saveOfflineSession } from '@/lib/offlineAuth'
+import { saveOfflineSession, restoreOfflineSession } from '@/lib/offlineAuth'
 import { openDatabase, putInStore, getAllFromStore } from '@/offline/db'
 import { apiClient } from '@/lib/apiClient'
 import { getPostLoginRoute } from '@/lib/postLoginRoute'
@@ -20,6 +20,28 @@ export const LoginPage = () => {
   const { setToken, isAuthenticated, user, onboarding } = useAuth()
   const navigate = useNavigate()
   const { slug } = useParams()
+
+  // Reactive online status
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine)
+  React.useEffect(() => {
+    const on = () => setIsOnline(true)
+    const off = () => setIsOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
+
+  // Offline redirect: if device is offline and a valid session exists,
+  // skip the login form entirely and go straight to dashboard.
+  React.useEffect(() => {
+    if (!navigator.onLine) {
+      const offlineSession = restoreOfflineSession()
+      if (offlineSession) {
+        // Valid offline session — redirect to dashboard without showing login form
+        navigate('/dashboard', { replace: true })
+      }
+    }
+  }, [navigate])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -48,7 +70,7 @@ export const LoginPage = () => {
       // Save session for offline access (3 days)
       const userData = user || data.user
       if ((accessToken || data.token) && userData) {
-        saveOfflineSession({
+        await saveOfflineSession({
           token: accessToken || data.token,
           userId: userData.id,
           tenantId: userData.tenantId,
@@ -218,6 +240,24 @@ export const LoginPage = () => {
             onSubmit={handleLogin}
             className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-100 space-y-6"
           >
+            {/* Offline Notice */}
+            {!isOnline && (
+              <div style={{
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+                borderRadius: 8,
+                padding: '10px 14px',
+                marginBottom: 16,
+                fontSize: 13,
+                color: '#c2410c',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                ⚡ You are offline. If you have logged in before, you will be redirected automatically.
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center gap-2" role="alert">
@@ -325,7 +365,7 @@ export const LoginPage = () => {
 
 
 
-// import { useState } from 'react'
+//import React, { useState } from 'react'
 // import { useNavigate, useParams } from 'react-router-dom'
 // import { Input } from '@/components/ui/input'
 // import { Button } from '@/components/ui/button'
@@ -334,18 +374,41 @@ export const LoginPage = () => {
 // import { Link } from 'react-router-dom';
 // import Image1 from '../assets/images/logo4.png';
 // import Image2 from '../assets/images/POS.png';
-// import { saveOfflineSession } from '@/lib/offlineAuth'
+// import { saveOfflineSession, restoreOfflineSession } from '@/lib/offlineAuth'
 // import { openDatabase, putInStore, getAllFromStore } from '@/offline/db'
 // import { apiClient } from '@/lib/apiClient'
+// import { getPostLoginRoute } from '@/lib/postLoginRoute'
 // const baseURL = import.meta.env.VITE_API_BASE_URL
 
 
 
 
 // export const LoginPage = () => {
-//   const { setToken, isAuthenticated, user } = useAuth()
+//   const { setToken, isAuthenticated, user, onboarding } = useAuth()
 //   const navigate = useNavigate()
 //   const { slug } = useParams()
+
+//   // Reactive online status
+//   const [isOnline, setIsOnline] = React.useState(navigator.onLine)
+//   React.useEffect(() => {
+//     const on = () => setIsOnline(true)
+//     const off = () => setIsOnline(false)
+//     window.addEventListener('online', on)
+//     window.addEventListener('offline', off)
+//     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+//   }, [])
+
+//   // Offline redirect: if device is offline and a valid session exists,
+//   // skip the login form entirely and go straight to dashboard.
+//   React.useEffect(() => {
+//     if (!navigator.onLine) {
+//       const offlineSession = restoreOfflineSession()
+//       if (offlineSession) {
+//         // Valid offline session — redirect to dashboard without showing login form
+//         navigate('/dashboard', { replace: true })
+//       }
+//     }
+//   }, [navigate])
 
 //   const [email, setEmail] = useState('')
 //   const [password, setPassword] = useState('')
@@ -367,9 +430,9 @@ export const LoginPage = () => {
 //       if (!res.ok) throw new Error(data.message || 'Login failed')
 //       console.log("data:", data);
 
-//       // Extract access token and refresh token from response
-//       const { accessToken, refreshToken, user } = data.data || data
-//       setToken(accessToken || data.token, user || data.user, refreshToken)
+//       // Extract access token, refresh token, user, and onboarding state from response
+//       const { accessToken, refreshToken, user, onboarding } = data.data || data
+//       setToken(accessToken || data.token, user || data.user, refreshToken, onboarding || null)
 
 //       // Save session for offline access (3 days)
 //       const userData = user || data.user
@@ -459,7 +522,9 @@ export const LoginPage = () => {
 //         // Continue with login even if caching fails
 //       }
 
-//       navigate('/dashboard')
+//       // Route to the correct destination based on role and onboarding state
+//       const destination = getPostLoginRoute(userData, onboarding || null)
+//       navigate(destination)
 //     } catch (err: any) {
 //       setError(err.message)
 //     } finally {
@@ -471,6 +536,7 @@ export const LoginPage = () => {
 
 //   // Show message if already logged in
 //   if (isAuthenticated && user) {
+//     const destination = getPostLoginRoute(user, onboarding)
 //     return (
 //       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
 //         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
@@ -487,7 +553,7 @@ export const LoginPage = () => {
 //             You are already logged into your account. Go to your dashboard to continue working.
 //           </p>
 //           <Button
-//             onClick={() => navigate('/dashboard')}
+//             onClick={() => navigate(destination)}
 //             className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
 //           >
 //             Go to Dashboard
@@ -541,6 +607,24 @@ export const LoginPage = () => {
 //             onSubmit={handleLogin}
 //             className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-100 space-y-6"
 //           >
+//             {/* Offline Notice */}
+//             {!isOnline && (
+//               <div style={{
+//                 background: '#fff7ed',
+//                 border: '1px solid #fed7aa',
+//                 borderRadius: 8,
+//                 padding: '10px 14px',
+//                 marginBottom: 16,
+//                 fontSize: 13,
+//                 color: '#c2410c',
+//                 display: 'flex',
+//                 alignItems: 'center',
+//                 gap: 8,
+//               }}>
+//                 ⚡ You are offline. If you have logged in before, you will be redirected automatically.
+//               </div>
+//             )}
+
 //             {/* Error Message */}
 //             {error && (
 //               <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center gap-2" role="alert">
@@ -643,4 +727,4 @@ export const LoginPage = () => {
 //       </div>
 //     </div>
 //   );
-// }
+// } 

@@ -20,7 +20,10 @@ export interface SyncContextValue {
     // Conflict management
     visibleConflicts: any[];
     markConflictResolved: (entityId: string) => void;
-    manualResolveConflict: (entityId: string, resolution: any) => Promise<void>;
+    manualResolveConflict: (
+        entityId: string,
+        resolution: { strategy: 'KEEP_LOCAL' | 'ACCEPT_SERVER'; entityType: string }
+    ) => Promise<void>;
 
     // Pending mutations count - live, updated on every enqueue/remove
     pendingCount: number;
@@ -53,10 +56,68 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
         setVisibleConflicts((prev) => prev.filter((c) => c.entityId !== entityId));
     }, []);
 
-    const manualResolveConflict = React.useCallback(async (entityId: string, resolution: any) => {
-        // TODO (T-conflict): apply resolution to local entity, queue mutation, sync
-        markConflictResolved(entityId);
-    }, [markConflictResolved]);
+    const manualResolveConflict = React.useCallback(async (
+        entityId: string,
+        resolution: { strategy: 'KEEP_LOCAL' | 'ACCEPT_SERVER'; entityType: string }
+    ) => {
+        try {
+            const { openDatabase, getFromStore, putInStore } = await import('@/offline/db')
+            const { globalSyncQueue } = await import('@/offline/SyncQueue')
+            const db = await openDatabase()
+
+            const storeMap: Record<string, string> = {
+                product: 'products',
+                sale: 'sales',
+                category: 'categories',
+            }
+            const storeName = storeMap[resolution.entityType] || resolution.entityType
+            const entity = await getFromStore(db, storeName, entityId)
+
+            if (!entity) {
+                console.warn('[Conflict] Entity not found in IndexedDB:', entityId)
+                markConflictResolved(entityId)
+                return
+            }
+
+            if (resolution.strategy === 'ACCEPT_SERVER') {
+                // Apply the server version: overwrite local data with server data,
+                // mark as CLEAN so it won't be pushed again
+                entity.data = entity.meta.conflictServerData || entity.data
+                entity.meta.version = entity.meta.conflictServerVersion || entity.meta.version
+                entity.meta.syncStatus = 'CLEAN'
+                entity.meta.conflictServerData = undefined
+                entity.meta.conflictServerVersion = undefined
+                entity.meta.conflictTimestamp = undefined
+                await putInStore(db, storeName, entity)
+                console.log('[Conflict] Resolved: accepted server version for', entityId)
+
+            } else {
+                // KEEP_LOCAL: mark as DIRTY and re-queue the local mutation
+                // so it will be pushed to server on next sync
+                entity.meta.syncStatus = 'DIRTY'
+                entity.meta.conflictServerData = undefined
+                entity.meta.conflictServerVersion = undefined
+                entity.meta.conflictTimestamp = undefined
+                await putInStore(db, storeName, entity)
+                // Re-queue as an UPDATE so the server receives the local version
+                globalSyncQueue.enqueue(
+                    entityId,
+                    resolution.entityType,
+                    'UPDATE',
+                    entity.data,
+                    entity.meta.version,
+                    entity.meta.version + 1
+                )
+                console.log('[Conflict] Resolved: kept local version, re-queued for sync', entityId)
+            }
+
+            markConflictResolved(entityId)
+        } catch (err) {
+            console.error('[Conflict] Resolution failed:', err)
+            // Still remove from visible list so UI is not stuck
+            markConflictResolved(entityId)
+        }
+    }, [markConflictResolved])
 
     const value: SyncContextValue = {
         // Derived from useSyncManager - always in sync with SyncQueue
@@ -86,90 +147,3 @@ export function useOfflineSync(): SyncContextValue {
     }
     return context;
 }
-
-// /**
-//  * OfflineSyncContext: Share sync state across UI.
-//  * Provides global access to:
-//  * - Sync status
-//  * - Pending mutations
-//  * - Conflicts
-//  * - Manual conflict resolution UI
-//  */
-
-// import React, { createContext, useContext, useState, useCallback } from 'react';
-// import { globalSyncOrchestrator } from '../sync/SyncOrchestrator';
-
-// export interface SyncContextValue {
-//     // Global sync state
-//     globalSyncStatus: 'IDLE' | 'SYNCING' | 'ERROR';
-//     globalSyncError?: string;
-//     lastSyncTime?: string;
-
-//     // Conflict management
-//     visibleConflicts: any[];
-//     markConflictResolved: (entityId: string) => void;
-//     manualResolveConflict: (entityId: string, resolution: any) => Promise<void>;
-
-//     // Manual trigger
-//     triggerGlobalSync: () => Promise<void>;
-// }
-
-// const OfflineSyncContext = createContext<SyncContextValue | null>(null);
-
-// /**
-//  * Provider component.
-//  */
-// export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
-//     const [globalSyncStatus, setGlobalSyncStatus] = useState<'IDLE' | 'SYNCING' | 'ERROR'>('IDLE');
-//     const [globalSyncError, setGlobalSyncError] = useState<string>();
-//     const [lastSyncTime, setLastSyncTime] = useState<string>();
-//     const [visibleConflicts, setVisibleConflicts] = useState<any[]>([]);
-
-//     const triggerGlobalSync = useCallback(async () => {
-//         setGlobalSyncStatus('SYNCING');
-//         try {
-//             // This would need real apiClient injected
-//             // const result = await globalSyncOrchestrator.executeSyncCycle(apiClient, db);
-//             setGlobalSyncStatus('IDLE');
-//             setLastSyncTime(new Date().toISOString());
-//         } catch (error: any) {
-//             setGlobalSyncStatus('ERROR');
-//             setGlobalSyncError(error.message);
-//         }
-//     }, []);
-
-//     const markConflictResolved = useCallback((entityId: string) => {
-//         setVisibleConflicts((prev) => prev.filter((c) => c.entityId !== entityId));
-//     }, []);
-
-//     const manualResolveConflict = useCallback(async (entityId: string, resolution: any) => {
-//         // In real implementation:
-//         // 1. Apply resolution to local entity
-//         // 2. Queue new mutation with resolved data
-//         // 3. Trigger sync
-//         markConflictResolved(entityId);
-//     }, [markConflictResolved]);
-
-//     const value: SyncContextValue = {
-//         globalSyncStatus,
-//         globalSyncError,
-//         lastSyncTime,
-//         visibleConflicts,
-//         markConflictResolved,
-//         manualResolveConflict,
-//         triggerGlobalSync,
-//     };
-
-//     return <OfflineSyncContext.Provider value={value}>{children}</OfflineSyncContext.Provider>;
-// }
-
-// /**
-//  * Hook: useOfflineSync
-//  */
-// export function useOfflineSync(): SyncContextValue {
-//     const context = useContext(OfflineSyncContext);
-//     if (!context) {
-//         throw new Error('useOfflineSync must be used inside OfflineSyncProvider');
-//     }
-//     return context;
-// }

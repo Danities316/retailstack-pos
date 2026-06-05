@@ -12,48 +12,47 @@ import saleRoutes from '../routes/sale.routes';
 import categoryRoutes from '../routes/category.routes';
 import inventoryRoutes from '../routes/inventory.routes';
 import dashboardRoutes from '../routes/dashboard.routes';
-import stripePaymentRoutes from '../routes/stripe.route';
 import managerDashboardRoutes from '../routes/manager.routes';
 import settingsRoutes from '../routes/setting.routes';
 import reportsRoutes from '../routes/reports.routes';
 import shiftRoutes from '../routes/shift.routes';
-import syncRoutes from '../routes/sync';
+import syncRoutes from '../routes/sync.routes';
+import globalCatalogRoutes from '../routes/global-catalog.routes';
+import creditRoutes from '../routes/credit.routes';
 
 
 dotenv.config();
 const app = express();
 
-// CORS configuration for production
+// CORS configuration for production and local development
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:4173',
   'http://localhost:3000',
-  'https://your-vercel-domain.vercel.app',
   'https://retailstack-pos.vercel.app',
-  '*'
 ];
 
-app.use(cors({
-  origin: '*'
-}))
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    if (!origin) return callback(null, true);
 
-// app.use(cors({
-//   origin: function (origin, callback) {
-//     // Allow requests with no origin (like mobile apps or curl requests)
-//     if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Tenant-Id', 'x-tenant-id', 'X-Idempotency-Key', 'Accept'],
+  optionsSuccessStatus: 204,
+};
 
-//     if (allowedOrigins.indexOf(origin) !== -1) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error('Not allowed by CORS'));
-//     }
-//   },
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-// }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // --- Public Routes ---
 app.get('/api/health', (req: Request, res: Response) => {
@@ -71,11 +70,12 @@ app.use('/api/users', protect, userRoutes);
 app.use('/api/categories', protect, categoryRoutes);
 app.use('/api/inventory', protect, inventoryRoutes);
 app.use('/api/dashboard', protect, dashboardRoutes);
-app.use('/api/dashboard/payment', protect, stripePaymentRoutes);
 app.use('/api/dashboard/manager', protect, managerDashboardRoutes);
 app.use('/api/settings', protect, settingsRoutes);
 app.use('/api/reports', protect, reportsRoutes);
 app.use('/api/sync', protect, syncRoutes);
+app.use('/api/credit', protect, creditRoutes);
+app.use('/api/global-catalog', protect, globalCatalogRoutes);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Backend server running on port:${PORT}`);

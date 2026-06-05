@@ -18,10 +18,10 @@ const GOLD = '#D4AF37'
 
 interface Category { id: string; categoryName: string }
 
-function Field({ label, name, type = 'text', placeholder, value, onChange, required, prefix }: {
+function Field({ label, name, type = 'text', placeholder, value, onChange, required, prefix, step }: {
     label: string; name: string; type?: string; placeholder?: string
     value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-    required?: boolean; prefix?: string
+    required?: boolean; prefix?: string; step?: string
 }) {
     return (
         <div>
@@ -37,6 +37,7 @@ function Field({ label, name, type = 'text', placeholder, value, onChange, requi
                 <input
                     name={name} type={type} placeholder={placeholder} value={value}
                     onChange={onChange} required={required}
+                    step={step}
                     style={{
                         width: '100%', padding: prefix ? '10px 12px 10px 28px' : '10px 12px',
                         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -181,9 +182,22 @@ export default function OnboardingProductPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                 <Field label="Product Name" name="productName" value={form.productName} onChange={handleChange} required placeholder="e.g. Indomie Noodles" />
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                    <Field label="Selling Price" name="sellingPrice" type="number" value={form.sellingPrice} onChange={handleChange} required prefix="₦" placeholder="0.00" />
-                                    <Field label="Cost Price" name="costPrice" type="number" value={form.costPrice} onChange={handleChange} prefix="₦" placeholder="0.00 (optional)" />
+                                    <Field label="Selling Price (what customers pay)" name="sellingPrice" type="number" value={form.sellingPrice} onChange={handleChange} required prefix="₦" placeholder="e.g. 250" step="1" />
+                                    <Field label="Buying Price (what YOU paid)" name="costPrice" type="number" value={form.costPrice} onChange={handleChange} prefix="₦" placeholder="e.g. 150" step="1" />
                                 </div>
+                                {form.costPrice && form.sellingPrice &&
+                                  parseFloat(form.sellingPrice) > parseFloat(form.costPrice) && (
+                                  <p style={{ fontSize: 12, color: '#16a34a', marginTop: 4 }}>
+                                    ✓ You will make ₦{(parseFloat(form.sellingPrice) - parseFloat(form.costPrice)).toLocaleString('en-NG')} profit per unit
+                                    ({Math.round(((parseFloat(form.sellingPrice) - parseFloat(form.costPrice)) / parseFloat(form.sellingPrice)) * 100)}% margin)
+                                  </p>
+                                )}
+                                {form.costPrice && form.sellingPrice &&
+                                  parseFloat(form.sellingPrice) <= parseFloat(form.costPrice) && (
+                                  <p style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>
+                                    ⚠ Selling price is lower than or equal to buying price — you will not make a profit
+                                  </p>
+                                )}
                                 <Field label="Stock / Quantity" name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="0" />
 
                                 <button type="button" onClick={() => setShowOptional(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 12, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', padding: 0 }}>

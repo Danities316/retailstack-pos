@@ -1,0 +1,14 @@
+# ADINO POS Product Import Template
+# Instructions: Fill in your products below. Delete these comment rows before uploading.
+# productName = Product name (required)
+# productDescription = Short description (optional)
+# costPrice = What YOU paid for it in Naira (required, numbers only)
+# sellingPrice = What your CUSTOMERS pay in Naira (required, numbers only)
+# stock = How many you have right now (required, whole numbers only)
+# categoryName = Category name exactly as it appears in ADINO POS (optional)
+productName,productDescription,costPrice,sellingPrice,stock,categoryName
+Indomie Chicken 70g,Instant noodles chicken flavour single pack,100,150,200,Snacks
+Peak Milk Tin 400g,Full cream evaporated milk 400g tin,800,1200,50,Beverages
+Omo Detergent 500g,Multi-active fabric washing powder,500,750,80,Household
+Coca-Cola 50cl,Carbonated soft drink 500ml bottle,200,300,120,Beverages
+Cabin Biscuits 1 pack,Cream biscuits assorted flavours,250,400,60,Snacks

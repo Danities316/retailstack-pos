@@ -18,16 +18,8 @@ type SettingsPayload = {
   theme?: 'light' | 'dark'
   offlineModeEnabled?: boolean
   autoSyncInterval?: number
-}
-
-type EmailTemplate = {
-  id?: string
-  tenantId?: string
-  templateType: string
-  subject: string
-  htmlContent: string
-  variables?: string
-  isActive?: boolean
+  vatEnabled?: boolean
+  vatRate?: number
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
@@ -43,7 +35,7 @@ export const SettingsPage = () => {
     storeAddress: '',
     storePhone: '',
     storeTaxId: '',
-    currency: 'USD',
+    currency: 'NGN',
     language: 'en',
     dateFormat: 'MM/DD/YYYY',
     timeFormat: 'HH:mm',
@@ -52,17 +44,16 @@ export const SettingsPage = () => {
     receiptFooter: '',
     theme: 'light',
     offlineModeEnabled: true,
-    autoSyncInterval: 300
+    autoSyncInterval: 300,
+    vatEnabled: false,
+    vatRate: 0,
   })
 
-  const [templates, setTemplates] = useState<EmailTemplate[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
   const [tplSaving, setTplSaving] = useState(false)
 
   useEffect(() => {
     if (!token) return
     fetchSettings()
-    fetchTemplates()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
@@ -89,19 +80,7 @@ export const SettingsPage = () => {
     }
   }
 
-  const fetchTemplates = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/settings/email-templates`, {
-        headers: authHeaders()
-      })
-      if (!res.ok) throw new Error('Failed to load templates')
-      const data = await res.json()
-      setTemplates(data || [])
-      setSelectedTemplate(data?.[0] || null)
-    } catch (err) {
-      console.warn('No templates or failed to load', err)
-    }
-  }
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
@@ -138,49 +117,6 @@ export const SettingsPage = () => {
     }
   }
 
-  const handleTemplateSelect = (type: string) => {
-    const tpl = templates.find((t) => t.templateType === type) || null
-    setSelectedTemplate(tpl)
-  }
-
-  const handleTemplateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (!selectedTemplate) return
-    const { name, value, type } = e.target
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    setSelectedTemplate({ ...selectedTemplate, [name]: val } as EmailTemplate)
-  }
-
-  const saveTemplate = async () => {
-    if (!token || !selectedTemplate) return
-    setTplSaving(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/settings/email-templates/${encodeURIComponent(selectedTemplate.templateType)}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          subject: selectedTemplate.subject,
-          htmlContent: selectedTemplate.htmlContent,
-          variables: selectedTemplate.variables,
-          isActive: selectedTemplate.isActive
-        })
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => null)
-        throw new Error(err?.error || 'Failed to save template')
-      }
-      const updated = await res.json()
-      setTemplates((t) => {
-        const others = t.filter((x) => x.templateType !== updated.templateType)
-        return [updated, ...others]
-      })
-      setSelectedTemplate(updated)
-    } catch (err: any) {
-      console.error(err)
-      setError(err.message || 'Template save failed')
-    } finally {
-      setTplSaving(false)
-    }
-  }
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -222,10 +158,10 @@ export const SettingsPage = () => {
             <div>
               <label className="block text-sm font-medium">Currency</label>
               <select name="currency" value={form.currency} onChange={handleChange} className="w-full px-3 py-2 border rounded">
-                <option value="USD">USD ($)</option>
-                <option value="NGN">NGN (₦)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="EUR">EUR (€)</option>
+                <option value="NGN">NGN (₦) — Nigerian Naira</option>
+                <option value="USD">USD ($) — US Dollar</option>
+                <option value="GBP">GBP (£) — British Pound</option>
+                <option value="EUR">EUR (€) — Euro</option>
               </select>
             </div>
 
@@ -300,6 +236,45 @@ export const SettingsPage = () => {
             <label className="block text-sm font-medium">Auto-Sync Interval (seconds)</label>
             <Input name="autoSyncInterval" type="number" value={String(form.autoSyncInterval || 300)} onChange={handleChange as any} />
           </div>
+          <div className="mb-4 border-t pt-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">VAT / Tax Settings</h3>
+            <label className="flex items-center gap-3 mb-3">
+              <input
+                type="checkbox"
+                name="vatEnabled"
+                checked={!!form.vatEnabled}
+                onChange={handleChange}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium">Enable VAT on sales</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Only enable this if your business is registered with FIRS and you are legally required to collect VAT.
+              Most small businesses should leave this OFF.
+            </p>
+            {form.vatEnabled && (
+              <div>
+                <label className="block text-sm font-medium mb-1">VAT Rate (%)</label>
+                <Input
+                  name="vatRate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={String((Number(form.vatRate) * 100).toFixed(1))}
+                  onChange={(e) => {
+                    const pct = parseFloat(e.target.value) || 0;
+                    setForm(f => ({ ...f, vatRate: pct / 100 }));
+                  }}
+                  placeholder="e.g. 7.5"
+                  className="w-32"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Standard Nigerian VAT rate is 7.5%. Enter the percentage, e.g. 7.5.
+                </p>
+              </div>
+            )}
+          </div>
         </fieldset>
 
         <div className="flex justify-end">
@@ -307,47 +282,6 @@ export const SettingsPage = () => {
         </div>
       </form>
 
-      {/* Email Templates */}
-      <div className="mt-8 bg-white p-6 rounded-lg shadow">
-        <h2 className="text-xl font-semibold mb-4">Email Templates</h2>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Template</label>
-          <select className="w-64 px-3 py-2 border rounded" value={selectedTemplate?.templateType || ''} onChange={(e) => handleTemplateSelect(e.target.value)}>
-            <option value="">-- Select template --</option>
-            {templates.map((t) => (
-              <option key={t.templateType} value={t.templateType}>
-                {t.templateType}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedTemplate ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium">Subject</label>
-              <Input name="subject" value={selectedTemplate.subject || ''} onChange={handleTemplateChange as any} />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">HTML Content</label>
-              <textarea name="htmlContent" value={selectedTemplate.htmlContent || ''} onChange={handleTemplateChange as any} rows={6} className="w-full px-3 py-2 border rounded" />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <label className="flex items-center">
-                <input type="checkbox" name="isActive" checked={!!selectedTemplate.isActive} onChange={handleTemplateChange as any} className="mr-2" />
-                <span className="text-sm font-medium">Active</span>
-              </label>
-
-              <Button onClick={saveTemplate} disabled={tplSaving}>{tplSaving ? 'Saving...' : 'Save Template'}</Button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-600">Select a template to edit.</p>
-        )}
-      </div>
     </div>
   )
 }

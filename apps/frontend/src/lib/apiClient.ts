@@ -19,6 +19,17 @@ class ApiClient {
       return null
     }
 
+    // ── Offline guard ─────────────────────────────────────────────────────────
+    // If the device has no connectivity, do NOT attempt refresh and do NOT
+    // clear auth or redirect. The caller will get null and the request will
+    // fail — but the offline sale path in NewSalePage will handle it cleanly.
+    // Ejecting the user mid-sale because of a network drop is worse than
+    // letting them continue with an expired token until they reconnect.
+    if (!navigator.onLine) {
+      console.warn('[apiClient] Device offline — skipping token refresh, keeping session alive')
+      return null
+    }
+
     try {
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: 'POST',
@@ -42,17 +53,63 @@ class ApiClient {
         }
       }
 
-      // Refresh failed, clear auth and redirect to login
+      // ── Online but refresh genuinely failed ───────────────────────────────
+      // Token is expired AND server rejected the refresh token (revoked,
+      // expired refresh token, deleted user). Safe to eject now.
       this.clearAuth()
       window.location.href = '/login'
       return null
-    } catch (error) {
-      console.error('Token refresh failed:', error)
-      this.clearAuth()
-      window.location.href = '/login'
+    } catch (error: any) {
+      // ── Network error during refresh attempt ──────────────────────────────
+      // fetch() threw — could be a transient network blip even if
+      // navigator.onLine was true at the check above (onLine is not perfectly
+      // reliable). Do not eject — let the caller handle the null gracefully.
+      console.warn('[apiClient] Token refresh network error — keeping session, will retry:', error?.message)
       return null
     }
   }
+
+  // async refreshAccessToken(): Promise<string | null> {
+  //   const refreshToken = localStorage.getItem('refresh_token')
+  //   if (!refreshToken) {
+  //     this.clearAuth()
+  //     return null
+  //   }
+
+  //   try {
+  //     const response = await fetch(`${this.baseURL}/auth/refresh`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${refreshToken}`
+  //       }
+  //     })
+
+  //     if (response.ok) {
+  //       const data = await response.json()
+  //       const { accessToken, refreshToken: newRefreshToken } = data.data || data
+
+  //       if (accessToken) {
+  //         localStorage.setItem('auth_token', accessToken)
+  //         if (newRefreshToken) {
+  //           localStorage.setItem('refresh_token', newRefreshToken)
+  //         }
+  //         this.onRefreshed(accessToken)
+  //         return accessToken
+  //       }
+  //     }
+
+  //     // Refresh failed, clear auth and redirect to login
+  //     this.clearAuth()
+  //     window.location.href = '/login'
+  //     return null
+  //   } catch (error) {
+  //     console.error('Token refresh failed:', error)
+  //     this.clearAuth()
+  //     window.location.href = '/login'
+  //     return null
+  //   }
+  // }
 
   private clearAuth() {
     localStorage.removeItem('auth_token')
@@ -91,15 +148,33 @@ class ApiClient {
 
       // Handle 401 Unauthorized - attempt token refresh
       if (response.status === 401 && !this.isRefreshing) {
+        // this.isRefreshing = true
+        // const newToken = await this.refreshAccessToken()
+        // this.isRefreshing = false
+
+        // if (newToken) {
+        //   // Retry the original request with new token
+        //   const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
+        //   const retryConfig: RequestInit = { ...options, headers: retryHeaders }
+        //   response = await fetch(`${this.baseURL}${endpoint}`, retryConfig)
+        // }
+
         this.isRefreshing = true
         const newToken = await this.refreshAccessToken()
         this.isRefreshing = false
 
         if (newToken) {
-          // Retry the original request with new token
+          // Refresh succeeded — retry the original request with the new token
           const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` }
           const retryConfig: RequestInit = { ...options, headers: retryHeaders }
           response = await fetch(`${this.baseURL}${endpoint}`, retryConfig)
+        } else if (!navigator.onLine) {
+          // Offline and refresh skipped — throw a typed error so NewSalePage
+          // can route to the offline sale path instead of showing a generic error
+          const offlineError: any = new Error('Device is offline')
+          offlineError.code = 'OFFLINE'
+          offlineError.status = 0
+          throw offlineError
         }
       } else if (response.status === 401 && this.isRefreshing) {
         // Token refresh is in progress, wait for it to complete
@@ -151,6 +226,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(productData)
     })
+  }
+
+  async lookupBarcode(code: string) {
+    return await this.request(`/products/barcode-lookup/${encodeURIComponent(code)}`)
   }
 
   /**
@@ -364,6 +443,7 @@ class ApiClient {
       });
 
       console.log("uploadProducts data received:", data);
+      console.log("uploadProducts report:", data.report);
       return data; // Return the data directly to the component
 
     } catch (error: any) {
@@ -372,6 +452,65 @@ class ApiClient {
       console.error("Upload error details:", error);
       throw new Error(error.report.errors[0].error || "Failed to upload products.");
     }
+  }
+
+  // ============================================================================
+  // GLOBAL PRODUCT CATALOG METHODS
+  // ============================================================================
+
+  /**
+   * Create a product and automatically sync it to the global product catalog
+   * This is the main endpoint for product creation with global sync
+   */
+  async createProductWithGlobalSync(productData: any) {
+    return await this.request('/global-catalog/products', {
+      method: 'POST',
+      body: JSON.stringify(productData)
+    })
+  }
+
+  /**
+   * Search the global product catalog by name
+   * Useful for checking if a product exists before adding manually
+   */
+  async searchGlobalCatalog(query: string) {
+    const endpoint = `/global-catalog/search?q=${encodeURIComponent(query)}`
+    return await this.request(endpoint)
+  }
+
+  /**
+   * Lookup a product in the global catalog by barcode
+   * Returns product details if found, error if not
+   */
+  async lookupGlobalCatalogByBarcode(barcode: string) {
+    return await this.request(`/global-catalog/barcode/${encodeURIComponent(barcode)}`)
+  }
+
+  /**
+   * Get all products contributed by the current tenant
+   * Shows this store's impact on the community database
+   */
+  async getTenantCatalogContributions() {
+    return await this.request('/global-catalog/contributions')
+  }
+
+  /**
+   * Get statistics about the global product catalog
+   * Shows size and growth of community database
+   */
+  async getGlobalCatalogStats() {
+    return await this.request('/global-catalog/stats')
+  }
+
+  /**
+   * Manually sync an existing local product to global catalog
+   * Use when you want to add local products to community database
+   */
+  async syncProductToGlobalCatalog(productId: string) {
+    return await this.request('/global-catalog/sync-existing-product', {
+      method: 'POST',
+      body: JSON.stringify({ productId })
+    })
   }
 
   // HTTP helper methods for sync operations

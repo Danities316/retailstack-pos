@@ -7,11 +7,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, CheckCircle, AlertCircle, Wifi, WifiOff, CloudOff, Upload, ShieldCheck } from 'lucide-react';
-import { useSyncManager } from '@/hooks/useSyncManager';
+import { useOfflineSync } from '@/context/OfflineSyncContext';
 import { useSimulateOffline } from '@/hooks/useSimulateOffline';
 
 export function SyncStatus() {
-    const { isSyncing, lastSyncTime, lastSyncError, pendingCount, syncNow, syncHistory } = useSyncManager();
+    const { globalSyncStatus, lastSyncTime, globalSyncError, pendingCount, triggerGlobalSync } = useOfflineSync();
+    const isSyncing = globalSyncStatus === 'SYNCING';
+    const lastSyncError = globalSyncError ?? null;
+    const syncNow = triggerGlobalSync;
+    const syncHistory: any[] = []; // history display is a nice-to-have, not critical
     const { simulateOffline, isEffectivelyOnline, toggle, isDev } = useSimulateOffline();
     const [showUploadActivity, setShowUploadActivity] = useState(false);
 

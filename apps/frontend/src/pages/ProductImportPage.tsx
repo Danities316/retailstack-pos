@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
@@ -17,12 +17,33 @@ interface uploadedFile {
     size: number;
 }
 
+function humaniseImportError(raw: string): string {
+    if (!raw) return 'Something went wrong with this row.';
+    const s = raw.toLowerCase();
+    if (s.includes('costprice') && s.includes('number'))
+        return 'The "Buying Price" column has letters instead of numbers.';
+    if (s.includes('selling') && s.includes('price') && s.includes('number'))
+        return 'The "Selling Price" column has letters instead of numbers.';
+    if (s.includes('selling') && s.includes('price') && (s.includes('required') || s.includes('missing') || s.includes('invalid')))
+        return 'The "Selling Price" column is empty or invalid — this field is required.';
+    if (s.includes('productname') && (s.includes('required') || s.includes('missing')))
+        return 'The "Product Name" column is empty — every product must have a name.';
+    if (s.includes('stock') && s.includes('number'))
+        return 'The "Stock" column has letters instead of a number.';
+    if (s.includes('duplicate') || s.includes('already exists'))
+        return 'This product already exists — it will be skipped.';
+    if (s.includes('category') && s.includes('not found'))
+        return 'The category name in this row was not found. Create the category first in ADINO POS.';
+    return raw;
+}
+
 export const ProductImportPage = () => {
     const { user, token } = useAuth();
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<ImportReport | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -53,12 +74,17 @@ export const ProductImportPage = () => {
             console.log('Import response:', response);
             setError(response.report.error || null);
             setReport(response.report);
+
+            // Only clear the file if import was fully successful
+            if (response.report.failCount === 0) {
+                setFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred during import.');
             setReport(null);
         } finally {
             setLoading(false);
-            setFile(null); // Clear file input after attempt
         }
     };
 
@@ -78,6 +104,7 @@ export const ProductImportPage = () => {
 
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <input
+                        ref={fileInputRef}
                         type="file"
                         accept=".csv"
                         onChange={handleFileChange}
@@ -98,7 +125,7 @@ export const ProductImportPage = () => {
                                 type="text/csv"
                                 className="text-blue-500 hover:underline font-medium ml-1"
                             >
-                                Download Template
+                                Download example file (with sample Nigerian products)
                             </a>.
                         </p>
                     </label>
@@ -149,7 +176,9 @@ export const ProductImportPage = () => {
                             <div className="max-h-60 overflow-y-auto space-y-2">
                                 {report.errors.map((err, index) => (
                                     <div key={index} className="p-2 text-sm bg-red-50 border-l-4 border-red-400">
-                                        <p><strong>Row {err.row} (SKU: {err.sku}):</strong> {err.error}</p>
+                                        <p>
+                                            <strong>Row {err.row}:</strong> {humaniseImportError(err.error)}
+                                        </p>
                                     </div>
                                 ))}
                             </div>

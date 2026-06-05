@@ -28,6 +28,7 @@ import {
   Boxes,
   UserCog,
   FileText,
+  BookOpen,
 } from 'lucide-react'
 
 interface NavItem {
@@ -133,6 +134,9 @@ const QUICK_ACTIONS: QuickAction[] = [
   { label: 'New Sale', href: '/pos', icon: Zap, color: '#D4AF37', roles: ['OWNER', 'MANAGER', 'CASHIER'] },
   { label: 'Add Product', href: '/dashboard/products/new', icon: Package, color: '#2563EB', roles: ['OWNER', 'MANAGER'] },
   { label: 'Reports', href: '/dashboard/reports', icon: BarChart2, color: '#16A34A', roles: ['OWNER', 'MANAGER'] },
+  {
+    label: 'Customer Debts', icon: BookOpen, color: '#720d21', href: '/dashboard/debts', roles: ['OWNER', 'MANAGER', 'SUPER_ADMIN'],
+  },
 ]
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -379,7 +383,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             }
                           }}
                         >
-                          <item.icon size={17} style={{ flexShrink: 0, color: active ? GOLD : 'inherit' }} />
+                          <span className="flex-shrink-0" style={{ color: active ? GOLD : 'inherit' }}>
+                            <item.icon size={17} />
+                          </span>
                           {!isCollapsed && (
                             <>
                               <span className="flex-1 truncate">{item.label}</span>

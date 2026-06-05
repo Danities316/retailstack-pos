@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, CheckCircle, XCircle, Loader2, Send, AlertCircle } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
@@ -16,6 +16,7 @@ export const EmailVerificationPage = () => {
   const [resendSuccess, setResendSuccess] = useState(false)
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [devLink, setDevLink] = useState<string | null>(null)
+  const verificationAttemptedRef = useRef(false)
 
   // Get email from URL params if provided (from signup redirect)
   useEffect(() => {
@@ -36,11 +37,32 @@ export const EmailVerificationPage = () => {
     }
 
     try {
+      console.log(`[FRONTEND] Starting email verification with token: ${token.substring(0, 8)}...`)
+
       const response = await apiClient.request(`/auth/verify-email/${token}`, {
         method: 'GET',
       })
 
+      console.log(`[FRONTEND] Verification response:`, response)
+
+      // Check if response indicates success (either success field or no error field)
+      if (response.success === true || (response.message && !response.error)) {
+        // Store verified email for potential future use
+        if (response.user?.email) {
+          setEmail(response.user.email)
+          console.log(`[FRONTEND] ✓ Email verified: ${response.user.email}`)
+        }
+
+        setStatus('success')
+        setMessage('✓ Your email has been verified successfully!')
+        console.log(`[FRONTEND] Email verified, user can now proceed to login`)
+        return
+      }
+
+      // If we get here, response has an error
       if (response.error) {
+        console.log(`[FRONTEND] Verification error code: ${response.code}`)
+
         // Handle different error codes
         if (response.code === 'EXPIRED_TOKEN' || response.code === 'INVALID_OR_EXPIRED_TOKEN') {
           setStatus('expired')
@@ -50,28 +72,24 @@ export const EmailVerificationPage = () => {
           setStatus('error')
           setMessage('The verification link is invalid. Please request a new verification email.')
           setErrorCode('INVALID_TOKEN')
+        } else if (response.code === 'INVALID_OR_ALREADY_VERIFIED') {
+          // Email might already be verified - try to login
+          setStatus('error')
+          setMessage('This verification link is invalid or has already been used. If your email is verified, please log in.')
+          setErrorCode('ALREADY_VERIFIED')
         } else {
-          throw new Error(response.error)
+          throw new Error(response.error || 'Unknown verification error')
         }
         return
       }
 
-      // Store verified email for potential future use
-      if (response.user?.email) {
-        setEmail(response.user.email)
-      }
-
+      // Fallback: treat any response without error as success
       setStatus('success')
       setMessage('✓ Your email has been verified successfully!')
-      setTimeout(() => navigate('/login'), 3000)
     } catch (err: any) {
-      console.error('[EmailVerification] Error:', err)
+      console.error(`[FRONTEND] Email verification failed:`, err)
       setStatus('error')
-      setMessage(
-        err.code === 'EXPIRED_TOKEN'
-          ? 'Your verification link has expired. Please request a new one.'
-          : err.message || 'Failed to verify email. The link may have expired or be invalid.'
-      )
+      setMessage(err.message || 'Failed to verify email. The link may have expired.')
       setErrorCode('VERIFICATION_FAILED')
     }
   }
@@ -93,9 +111,8 @@ export const EmailVerificationPage = () => {
 
       if (response.error) {
         if (response.code === 'ALREADY_VERIFIED') {
-          setMessage('Your email is already verified. Redirecting to login...')
+          setMessage('Your email is already verified.')
           setStatus('success')
-          setTimeout(() => navigate('/login'), 2000)
         } else {
           throw new Error(response.error)
         }
@@ -112,7 +129,11 @@ export const EmailVerificationPage = () => {
   }
 
   useEffect(() => {
-    handleVerifyEmail()
+    // Prevent double verification in React StrictMode (development)
+    if (!verificationAttemptedRef.current && token) {
+      verificationAttemptedRef.current = true
+      handleVerifyEmail()
+    }
   }, [token])
 
   return (
@@ -132,16 +153,16 @@ export const EmailVerificationPage = () => {
             <>
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Email Verified! 🎉</h1>
-              <p className="text-gray-600 mb-6">{message}</p>
-              <div className="text-sm text-gray-500 mb-6">Redirecting to login in 3 seconds...</div>
+              <p className="text-gray-600 mb-6 text-lg">{message}</p>
+              <p className="text-gray-500 mb-6 text-sm">Your email address has been confirmed. You're all set!</p>
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <a
-                  href="/login"
-                  className="inline-block px-6 py-2 rounded-lg font-bold text-white transition hover:opacity-90"
+                <button
+                  onClick={() => navigate('/login')}
+                  className="w-full px-6 py-3 rounded-lg font-bold text-white transition hover:opacity-90"
                   style={{ backgroundColor: HERO_GOLD }}
                 >
-                  Go to Login
-                </a>
+                  Continue to Login
+                </button>
               </div>
             </>
           )}

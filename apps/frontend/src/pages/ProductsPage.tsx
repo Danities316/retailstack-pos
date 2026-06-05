@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import { ScanLine } from 'lucide-react'
 import { Upload } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { apiClient } from '@/lib/apiClient'
@@ -23,6 +24,21 @@ interface Product {
   }
 }
 
+// Derives a consistent background colour from a product name.
+// Same name always produces the same colour — looks intentional, not random.
+function stringToColor(str: string): string {
+  const palette = [
+    '#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981',
+    '#ef4444', '#ec4899', '#14b8a6', '#f97316',
+    '#6366f1', '#84cc16',
+  ];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return palette[Math.abs(hash) % palette.length];
+}
+
 export const ProductsPage = () => {
   const navigate = useNavigate()
   const { user, token } = useAuth()
@@ -35,6 +51,7 @@ export const ProductsPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null)
   const [deleteFeedback, setDeleteFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({})
   const baseURL = import.meta.env.VITE_API_BASE_URL
   useEffect(() => {
     const loadData = async () => {
@@ -123,6 +140,13 @@ export const ProductsPage = () => {
     return matchesSearch && matchesCategory
   })
 
+  const stockBadge = (stock: number) => {
+    if (stock === 0) return { label: 'Out of stock', color: '#ef4444' }
+    if (stock <= 3) return { label: `${stock} left — restock soon`, color: '#ea580c' }
+    if (stock <= 10) return { label: `Low: ${stock}`, color: '#d97706' }
+    return { label: `${stock} in stock`, color: '#16a34a' }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -148,6 +172,13 @@ export const ProductsPage = () => {
                   className="bg-green-100 hover:bg-green-200 text-green-700"
                 >
                   <Upload className="w-4 h-4 mr-2" /> Bulk Import
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/products/scan')}
+                  style={{ background: '#0f172a', borderColor: '#0f172a', color: '#D4AF37' }}
+                >
+                  <ScanLine className="w-4 h-4 mr-2" /> Scan Barcode
                 </Button>
 
                 {/* Existing 'Add New Product' Button */}
@@ -190,13 +221,41 @@ export const ProductsPage = () => {
         {filteredProducts.map(product => (
           <div key={product.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
 
-            {product.productImage && (
+            {product.productImage && !brokenImages[product.id] ? (
+              <img
+                src={product.productImage}
+                alt={product.productName}
+                className="w-full h-32 object-cover rounded mb-3"
+                onError={() => setBrokenImages(prev => ({ ...prev, [product.id]: true }))}
+              />
+            ) : (
+              <div
+                className="w-full h-32 rounded mb-3 flex items-center justify-center"
+                style={{
+                  background: stringToColor(product.productName),
+                }}
+              >
+                <span style={{
+                  fontSize: 48,
+                  fontWeight: 800,
+                  color: '#fff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '-1px',
+                  opacity: 0.9,
+                  userSelect: 'none',
+                }}>
+                  {product.productName.trim().slice(0, 1)}
+                </span>
+              </div>
+            )}
+
+            {/* {product.productImage && (
               <img
                 src={product.productImage}
                 alt={product.productName}
                 className="w-full h-32 object-cover rounded mb-3"
               />
-            )}
+            )} */}
 
             <h3 className="font-semibold text-lg mb-2">{product.productName}</h3>
 
@@ -207,9 +266,17 @@ export const ProductsPage = () => {
             )}
 
             <div className="space-y-1 text-sm">
-              <p><span className="font-medium">Price:</span> ${product.sellingPrice}</p>
-              <p><span className="font-medium">Cost:</span> ${product.costPrice}</p>
-              <p><span className="font-medium">Stock:</span> {product.stock}</p>
+              <p><span className="font-medium">Price:</span> ₦{Number(product.sellingPrice).toLocaleString('en-NG')}</p>
+              <p><span className="font-medium">Buying price:</span> ₦{Number(product.costPrice).toLocaleString('en-NG')}</p>
+              {(() => {
+                const b = stockBadge(product.stock)
+                return (
+                  <p>
+                    <span className="font-medium">Stock: </span>
+                    <span style={{ color: b.color, fontWeight: 600, fontSize: 12 }}>{b.label}</span>
+                  </p>
+                )
+              })()}
               {product.category && (
                 <p><span className="font-medium">Category:</span> {product.category.categoryName}</p>
               )}

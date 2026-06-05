@@ -8,7 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // directUrl = env("DIRECT_URL")
 }
 
 model Tenant {
@@ -19,20 +19,25 @@ model Tenant {
   colorScheme          String? // For white-labeling 
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
-  loyverseApiKey       String?
-  transactions         Transaction[]
-  tenantPaymentAccount TenantPaymentAccount[]
+  hasProduct           Boolean                @default(false)
+  hasSale              Boolean                @default(false)
+  hasInvitedUser       Boolean                @default(false)
+  onboardingCompletedAt DateTime?             // null = not completed; set when owner reaches first value
   users                User[]
+  customers    Customer[]
+  creditSales  CreditSale[]
   products             Product[]
   sales                Sale[]
   Shifts               Shift[]
   categories           Category[]
   inventoryLogs        InventoryLog[]
   storeSettings        StoreSettings?
-  emailTemplates       EmailTemplate[]
   loginHistory         LoginHistory[]
   auditLogs            AuditLog[]
   idempotencyKeys      IdempotencyKey[]
+  syncChanges          SyncChange[]
+  globalCatalogContributions GlobalProductCatalog[] @relation("TenantGlobalCatalog")
+  // Stripe support removed
 }
 
 model User {
@@ -48,6 +53,7 @@ model User {
   failedLoginAttempts Int                  @default(0) // Count of failed login attempts
   lockedUntil         DateTime? // Account locked until this time (auto-unlock after 15 min)
   lastLoginAt         DateTime? // Timestamp of last successful login
+  isFirstLogin        Boolean              @default(true) // Cleared to false after first successful login
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   shifts              Shift[]
@@ -61,6 +67,7 @@ model User {
   setupToken          String?              @unique
   setupTokenExpires   DateTime?
   idempotencyKeys     IdempotencyKey[]
+  status              String?
 
   @@index([tenantId])
   @@index([lockedUntil])
@@ -69,7 +76,7 @@ model User {
 model Product {
   id                 String   @id @default(cuid())
   productName        String   @default("products")
-  productImage       String   @default("strimgs")
+  productImage       String   @default("string")
   productColor       String   @default("yellow")
   productDescription String   @default("helooo")
   costPrice          Decimal  @default(0.0)
@@ -80,6 +87,9 @@ model Product {
   barcode            String?  @unique
   sku                String?
   updatedAt          DateTime @updatedAt
+  version            Int      @default(0)
+  deleted            Boolean  @default(false)
+  deletedAt          DateTime?
 
   tenantId      String
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -89,10 +99,14 @@ model Product {
   categoryId String? // Optional, a product might not have a category
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull) // If category is deleted, set this field to null
 
+  globalCatalogId String? // Optional: Link to global product catalog
+  globalCatalog   GlobalProductCatalog? @relation(fields: [globalCatalogId], references: [id], onDelete: SetNull)
+
   @@unique([sku, tenantId])
   @@index([productName])
   @@index([tenantId])
   @@index([categoryId])
+  @@index([globalCatalogId])
 }
 
 model Sale {
@@ -102,20 +116,65 @@ model Sale {
   taxRate         Decimal          @default(0.0) // e.g., 0.075 for 7.5%
   taxAmount       Decimal          @default(0.0) // calculated: subtotal * taxRate
   subtotal        Decimal          @default(0.0) // before tax
+  customerName    String?          // Name of customer — used for credit sales and receipts
+  saleNote        String?          // Optional cashier note about this sale
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   tenantId        String
   tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  transactions    Transaction[]
   items           SaleItem[]
   userId          String?
+  creditSale      CreditSale?
   inventoryLogs   InventoryLog[]
   shiftId         String?
   shift           Shift?           @relation(fields: [shiftId], references: [id])
+  version         Int      @default(0)
+  deleted            Boolean  @default(false)
   idempotencyKeys IdempotencyKey[]
 
   @@index([shiftId])
   @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([tenantId, createdAt])
+}
+
+model Customer {
+  id          String       @id @default(cuid())
+  tenantId    String
+  name        String
+  phone       String?
+  totalOwed   Decimal      @default(0.0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  creditSales CreditSale[]
+
+  @@index([tenantId])
+  @@index([tenantId, name])
+}
+
+model CreditSale {
+  id          String    @id @default(cuid())
+  tenantId    String
+  customerId  String
+  saleId      String    @unique
+  amount      Decimal
+  amountPaid  Decimal   @default(0.0)
+  balance     Decimal
+  settled     Boolean   @default(false)
+  settledAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  customer    Customer  @relation(fields: [customerId], references: [id])
+  sale        Sale      @relation(fields: [saleId], references: [id])
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([tenantId, settled])
 }
 
 model IdempotencyKey {
@@ -154,6 +213,9 @@ model Category {
   categoryName String
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  version      Int        @default(0)
+  deleted      Boolean    @default(false)
+  deletedAt    DateTime?
   tenantId     String
   tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parentId     String? // Optional: A category can be a top-level one
@@ -183,42 +245,52 @@ model InventoryLog {
   saleId    String?
   sale      Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
   updatedAt DateTime @updatedAt
+  version   Int      @default(0)
 
   @@index([tenantId])
   @@index([productId])
   @@index([saleId])
 }
 
-model Transaction {
-  id                String            @id @default(uuid())
-  tenantId          String
-  saleId            String
-  provider          Provider          @default(STRIPE)
-  providerPaymentId String
-  amount            Int // stored in cents
-  currency          String
-  status            TransactionStatus @default(PENDING)
-  paymentMethod     String
-  metadata          Json?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+model GlobalProductCatalog {
+  id                      String   @id @default(cuid())
+  barcode                 String   @unique // Primary identifier for products
+  productName             String   @db.VarChar(255)
+  description             String?  @db.Text // Detailed product description
+  imageUrl                String?  // URL to product image
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  version                 Int      @default(0) // For tracking updates
+  
+  // Track which tenant contributed this product
+  contributedByTenantId   String?
+  contributedByTenant     Tenant?  @relation("TenantGlobalCatalog", fields: [contributedByTenantId], references: [id], onDelete: SetNull)
+  
+  // Products that reference this global catalog entry
+  products                Product[]
 
-  sale    Sale     @relation(fields: [saleId], references: [id])
-  tenant  Tenant   @relation(fields: [tenantId], references: [id])
-  refunds Refund[]
+  @@index([barcode])
+  @@index([productName])
+  @@index([contributedByTenantId])
 }
 
-model Refund {
-  id               String       @id @default(uuid())
-  transactionId    String
-  amount           Int // stored in cents
-  providerRefundId String
-  reason           String?
-  status           RefundStatus @default(PENDING)
-  createdAt        DateTime     @default(now())
+model SyncChange {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entityType String
+  entityId   String
+  version    Int
+  operation  String
+  data       Json
+  deleted    Boolean  @default(false)
+  timestamp  DateTime @default(now())
 
-  transaction Transaction @relation(fields: [transactionId], references: [id])
+  @@index([tenantId, entityType, timestamp])
+  @@index([tenantId, entityType, entityId, version])
 }
+
+// Transaction and Refund models removed (Stripe support removed)
 
 model StoreSettings {
   id                  String   @id @default(uuid())
@@ -230,7 +302,7 @@ model StoreSettings {
   operatingHoursStart String? // e.g., "09:00"
   operatingHoursEnd   String? // e.g., "18:00"
   businessType        String? // e.g., "retail", "f&b", "pharmacy"
-  currency            String   @default("USD")
+  currency            String   @default("NGN")
   language            String   @default("en")
   dateFormat          String   @default("MM/DD/YYYY")
   timeFormat          String   @default("HH:mm")
@@ -241,36 +313,14 @@ model StoreSettings {
   theme               String   @default("light") // "light" or "dark"
   offlineModeEnabled  Boolean  @default(true)
   autoSyncInterval    Int      @default(300) // seconds
+  vatEnabled          Boolean  @default(false) // VAT is OFF by default. Most Nigerian SMEs are not VAT-registered.
+  vatRate             Decimal  @default(0.0)   // e.g. 0.075 for 7.5%. Only applied when vatEnabled is true.
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 }
 
-model EmailTemplate {
-  id           String   @id @default(uuid())
-  tenantId     String
-  templateType String // "receipt", "refund", "invoice"
-  subject      String
-  htmlContent  String // HTML email template
-  variables    String? // JSON array of variable names
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@unique([tenantId, templateType])
-}
-
-model TenantPaymentAccount {
-  tenantId         String   @id
-  stripeAccountId  String
-  onboardingStatus String
-  createdAt        DateTime @default(now())
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-}
 
 model Shift {
   id             String    @id @default(cuid())
@@ -373,27 +423,21 @@ model AuditLog {
   @@index([createdAt])
 }
 
-enum Provider {
-  STRIPE
-  CASH
-}
 
-enum TransactionStatus {
-  PENDING
-  SUCCEEDED
-  FAILED
-  REFUNDED
-}
 
-enum RefundStatus {
-  PENDING
-  SUCCEEDED
-  FAILED
-}
+
 
 enum UserRole {
   SUPER_ADMIN
   OWNER
   MANAGER
   CASHIER
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+  OTHER
+  CREDIT
 }
