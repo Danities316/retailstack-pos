@@ -48,6 +48,12 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    fs: {
+      // Allows Vite to read files up one or two levels (the monorepo root)
+      allow: ['..'], 
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
