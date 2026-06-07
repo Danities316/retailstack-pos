@@ -424,7 +424,7 @@ router.get('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMI
 
 // GET /api/sales/:id - Get a single sale's details (Restricted to Owner/Manager)
 router.get('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const tenantId = req.user!.tenantId as string;
 
   try {
@@ -472,7 +472,7 @@ type SaleItemInput = {
 };
 
 router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const { items, updatedAt, paymentMethod } = req.body as { items: SaleItemInput[]; updatedAt: string; paymentMethod: string };
   const tenantId = req.user!.tenantId as any;
 

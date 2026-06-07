@@ -356,7 +356,7 @@ router.get(
   '/:id',
   checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.CASHIER, UserRole.SUPER_ADMIN]),
   async (req: AuthRequest, res) => {
-    const { id } = req.params;
+    const { id } = req.params as any;
     const tenantId = req.user!.tenantId as string;;
     const role = req.user!.role as string;;
 
@@ -477,7 +477,7 @@ router.post('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
 
 // PUT /api/products/:id - Update an existing product
 router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const {
     productName,
     productImage,
@@ -580,7 +580,7 @@ router.delete('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPE
 
 // PATCH /api/products/:id/stock - Manually adjust stock for a product
 router.patch('/:id/stock', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const { change, reason, notes } = req.body; // change is a number (+ or -), reason is a string
   const tenantId = req.user!.tenantId as any;
 

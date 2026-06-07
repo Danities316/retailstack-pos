@@ -93,7 +93,7 @@ router.post('/clock-in', async (req: AuthRequest, res: any) => {
 // Closes the current active shift.
 // ====================================================================
 router.post('/clock-out/:shiftId', async (req: AuthRequest, res: any) => {
-    const { shiftId: id } = req.params;
+    const { shiftId: id } = req.params as any;
     const cashierId = req.user!.userId as any;
     const tenantId = req.user!.tenantId as any;
     const { endFloat, notes } = req.body;
@@ -156,7 +156,7 @@ router.patch('/:id/force-close',
     checkRole([UserRole.OWNER, UserRole.MANAGER]),
     async (req: AuthRequest, res: any) => {
 
-        const { id } = req.params;
+        const { id } = req.params as any;
         const tenantId = req.user!.tenantId as any;
         const { endTime, reason } = req.body; // reason for audit log
 
