@@ -543,7 +543,7 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
 
 // DELETE /api/products/:id - Delete a product
 router.delete('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   console.log('Deleting Product:', id);
   const tenantId = req.user!.tenantId as any;
 
