@@ -133,7 +133,7 @@ router.put('/:id', canWrite, async (req: AuthRequest, res: any) => {
 
 // DELETE /api/categories/:id - Delete a category
 router.delete('/:id', canWrite, async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const tenantId = req.user!.tenantId as any;
 
   try {

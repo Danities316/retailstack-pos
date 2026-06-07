@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 
 
 interface UpsertProductToGlobalCatalogInput {
-    barcode: string | undefined; // Barcode is optional to allow non-barcode products, but only barcode products are shared globally
+    barcode: string | ""; // Barcode is optional to allow non-barcode products, but only barcode products are shared globally
     productName: string;
     description?: string;
     imageUrl?: string;

@@ -286,7 +286,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
 // GET /api/users/:id - Get a single user by id (tenant scoped)
 router.get('/:id', async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const tenantId = req.user!.tenantId as any;
 
   const user = await prisma.user.findFirst({
@@ -311,7 +311,7 @@ router.get('/:id', async (req: AuthRequest, res) => {
 
 // DELETE /api/users/:id - Delete a user by id (tenant scoped, cannot delete self)
 router.delete('/:id', async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const tenantId = req.user!.tenantId as any;
   const currentUserId = req.user!.userId as any;
 
