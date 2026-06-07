@@ -14,7 +14,7 @@ const canWrite = checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADM
 // POST /api/categories - Create a new category
 router.post('/', canWrite, async (req: AuthRequest, res) => {
   const { categoryName, parentId } = req.body;
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
 
   if (!categoryName) {
     res.status(400).json({ error: 'Category name is required.' });
@@ -50,7 +50,7 @@ router.post('/', canWrite, async (req: AuthRequest, res) => {
 
 // GET /api/categories - List all categories for a tenant as a nested tree
 router.get('/', canRead, async (req: AuthRequest, res) => {
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
 
   const categories = await prisma.category.findMany({ where: { tenantId, deleted: false } as any });
 
@@ -71,8 +71,8 @@ router.get('/', canRead, async (req: AuthRequest, res) => {
 
 // GET /api/categories/:id - Get a single category by ID
 router.get('/:id', canRead, async (req: AuthRequest, res) => {
-  const { id } = req.params;
-  const tenantId = req.user!.tenantId;
+  const { id } = req.params as any;
+  const tenantId = req.user!.tenantId as any;
 
   try {
     const category = await prisma.category.findFirst({
@@ -90,9 +90,9 @@ router.get('/:id', canRead, async (req: AuthRequest, res) => {
 
 // PUT /api/categories/:id - Update a category
 router.put('/:id', canWrite, async (req: AuthRequest, res: any) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const { categoryName, updatedAt, parentId } = req.body;
-  const tenantId = req.user!.tenantId as string;
+  const tenantId = req.user!.tenantId as any;
 
   try {
     const existing = await prisma.category.findUnique({ where: { id, tenantId } });
@@ -134,7 +134,7 @@ router.put('/:id', canWrite, async (req: AuthRequest, res: any) => {
 // DELETE /api/categories/:id - Delete a category
 router.delete('/:id', canWrite, async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
 
   try {
     // Best Practice: Prevent deletion if the category has products or sub-categories

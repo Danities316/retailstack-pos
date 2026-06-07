@@ -42,9 +42,9 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
   const { paymentMethod, items } = req.body;
 
-  const tenantId = req.user!.tenantId; // Tenant ID from Auth Token
-  const cashierId = req.user!.userId; // Cashier ID from Auth Token
-  const cashierRole = req.user!.role; // Cashier Role from Auth Token
+  const tenantId = req.user!.tenantId as any; // Tenant ID from Auth Token
+  const cashierId = req.user!.userId as any; // Cashier ID from Auth Token
+  const cashierRole = req.user!.role as any; // Cashier Role from Auth Token
 
   if (!paymentMethod || !items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: 'Payment method and a non-empty array of items are required.' });
@@ -143,7 +143,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
         // If this is a credit sale, create the customer debt record
         if (paymentMethod === 'CREDIT') {
-          const customerName = req.body.customerName;
+          const customerName = req.body.customerName as any;
           if (!customerName?.trim()) {
             throw new Error('Customer name is required for credit sales.');
           }
@@ -290,7 +290,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
       // If this is a credit sale, create the customer debt record
       if (paymentMethod === 'CREDIT') {
-        const customerName = req.body.customerName;
+        const customerName = req.body.customerName as any;
         if (!customerName?.trim()) {
           throw new Error('Customer name is required for credit sales.');
         }
@@ -382,7 +382,7 @@ router.post('/', async (req: AuthRequest, res: any) => {
 
 // GET /api/sales - List all sales for the tenant - Restricted to Owner/Manager
 router.get('/', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]), async (req: AuthRequest, res) => {
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
 
   try {
     const sales = await prisma.sale.findMany({
@@ -519,7 +519,7 @@ router.put('/:id', checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_A
 router.post('/sync', async (req: AuthRequest, res: any) => {
   // Example sync endpoint: return all sales for the tenant (can be adapted)
   try {
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId as any;
     const sales = await prisma.sale.findMany({ where: { tenantId } });
     res.status(200).json({ message: 'Sync successful', sales });
   } catch (error) {
@@ -531,8 +531,6 @@ router.post('/sync', async (req: AuthRequest, res: any) => {
 export default router;
 
 
-
-// import { Router, Response } from 'express';
 // import { PrismaClient, UserRole, Prisma } from '@prisma/client';
 // import { Decimal } from '@prisma/client/runtime/library';
 // import { AuthRequest } from '../middleware/auth.middleware';
