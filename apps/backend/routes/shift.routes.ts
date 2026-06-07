@@ -94,8 +94,8 @@ router.post('/clock-in', async (req: AuthRequest, res: any) => {
 // ====================================================================
 router.post('/clock-out/:shiftId', async (req: AuthRequest, res: any) => {
     const { shiftId: id } = req.params;
-    const cashierId = req.user!.userId;
-    const tenantId = req.user!.tenantId;
+    const cashierId = req.user!.userId as any;
+    const tenantId = req.user!.tenantId as any;
     const { endFloat, notes } = req.body;
 
     // Ensure endFloat is provided for reconciliation
@@ -157,7 +157,7 @@ router.patch('/:id/force-close',
     async (req: AuthRequest, res: any) => {
 
         const { id } = req.params;
-        const tenantId = req.user!.tenantId;
+        const tenantId = req.user!.tenantId as any;
         const { endTime, reason } = req.body; // reason for audit log
 
         // Simple validation

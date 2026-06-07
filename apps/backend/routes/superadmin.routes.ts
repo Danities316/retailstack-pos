@@ -85,7 +85,7 @@ router.use(checkRole([UserRole.SUPER_ADMIN]));
 
 // GET /api/superadmin/tenants/:id - Get a single tenant's details
 router.get('/tenants/:id', async (req: AuthRequest, res: any) => {
-  const { id } = req.params;
+  const { id } = req.params as any;
   const tenant = await prisma.tenant.findUnique({
     where: { id },
     include: { users: { select: { id: true, email: true, role: true } } },
@@ -136,7 +136,7 @@ router.get('/tenants', async (req, res) => {
 
 // DELETE /api/superadmin/tenants/:id - Delete a tenant by id
 router.delete('/tenants/:id', async (req: AuthRequest, res) => {
-  const { id } = req.params
+  const { id } = req.params as any;
   const tenant = await prisma.tenant.findUnique({ where: { id } })
   if (!tenant) {
     res.status(404).json({ error: 'Tenant not found' })

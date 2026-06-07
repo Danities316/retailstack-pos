@@ -238,7 +238,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
 
 // GET /api/users - List users in the tenant with pagination, filtering, and search
 router.get('/', async (req: AuthRequest, res) => {
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
   const { page = 1, limit = 20, role, search } = req.query;
   // const { page = 1, limit = 20, role, isActive, search } = req.query;
 
@@ -287,7 +287,7 @@ router.get('/', async (req: AuthRequest, res) => {
 // GET /api/users/:id - Get a single user by id (tenant scoped)
 router.get('/:id', async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as any;
 
   const user = await prisma.user.findFirst({
     where: { id, tenantId },
@@ -312,8 +312,8 @@ router.get('/:id', async (req: AuthRequest, res) => {
 // DELETE /api/users/:id - Delete a user by id (tenant scoped, cannot delete self)
 router.delete('/:id', async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const tenantId = req.user!.tenantId;
-  const currentUserId = req.user!.userId;
+  const tenantId = req.user!.tenantId as any;
+  const currentUserId = req.user!.userId as any;
 
   if (id === currentUserId) {
     res.status(400).json({ error: 'You cannot delete yourself.' });

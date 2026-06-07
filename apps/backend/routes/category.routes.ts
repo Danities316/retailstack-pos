@@ -92,7 +92,7 @@ router.get('/:id', canRead, async (req: AuthRequest, res) => {
 router.put('/:id', canWrite, async (req: AuthRequest, res: any) => {
   const { id } = req.params;
   const { categoryName, updatedAt, parentId } = req.body;
-  const tenantId = req.user!.tenantId;
+  const tenantId = req.user!.tenantId as string;
 
   try {
     const existing = await prisma.category.findUnique({ where: { id, tenantId } });

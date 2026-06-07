@@ -174,7 +174,7 @@ router.post('/setup-account', (req, res) => __awaiter(void 0, void 0, void 0, fu
 
 // GET /api/users - List users in the tenant with pagination, filtering, and search
 router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const tenantId = req.user.tenantId;
+    const tenantId = req.user.tenantId as any;
     const { page = 1, limit = 20, role, search } = req.query;
     // const { page = 1, limit = 20, role, isActive, search } = req.query;
     // Build Prisma where clause
