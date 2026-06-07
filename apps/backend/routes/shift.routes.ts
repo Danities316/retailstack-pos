@@ -12,8 +12,8 @@ const prisma = new PrismaClient();
 // Checks the user's current clock-in status.
 // ====================================================================
 router.get('/active-shift', async (req: AuthRequest, res: Response) => {
-    const cashierId = req.user!.userId;
-    const tenantId = req.user!.tenantId;
+    const cashierId = req.user!.userId as any;
+    const tenantId = req.user!.tenantId as any;
 
     try {
         const activeShift = await prisma.shift.findFirst({
@@ -44,8 +44,8 @@ router.get('/active-shift', async (req: AuthRequest, res: Response) => {
 // Edge Case Mitigation: Double Clock-In check
 // ====================================================================
 router.post('/clock-in', async (req: AuthRequest, res: any) => {
-    const cashierId = req.user!.userId;
-    const tenantId = req.user!.tenantId;
+    const cashierId = req.user!.userId as any;
+    const tenantId = req.user!.tenantId as any;
     const { startFloat } = req.body;
 
     if (startFloat === undefined || isNaN(parseFloat(startFloat))) {
