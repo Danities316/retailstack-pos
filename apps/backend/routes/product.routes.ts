@@ -357,8 +357,8 @@ router.get(
   checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.CASHIER, UserRole.SUPER_ADMIN]),
   async (req: AuthRequest, res) => {
     const { id } = req.params;
-    const tenantId = req.user!.tenantId;
-    const role = req.user!.role;
+    const tenantId = req.user!.tenantId as string;;
+    const role = req.user!.role as string;;
 
     try {
       const product = await prisma.product.findUnique({
