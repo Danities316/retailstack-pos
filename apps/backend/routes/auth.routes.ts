@@ -144,6 +144,27 @@ router.post('/login', publicLimiter, async (req: any, res: any) => {
     return res.status(403).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
   }
 
+  // Check phone verification — OWNER accounts must verify their phone before
+  // they can log in. Cashiers and Managers are invited via setup link and are
+  // considered verified on first login.
+  if (user.role === 'OWNER' && !user.phoneVerified) {
+    await AuditService.logLogin({
+      userId: user.id,
+      tenantId: user.tenantId || undefined,
+      success: false,
+      reason: 'PHONE_NOT_VERIFIED',
+      ip,
+      userAgent,
+    });
+
+    return res.status(403).json({
+      error: 'Please verify your phone number before logging in.',
+      code: 'PHONE_NOT_VERIFIED',
+      userId: user.id,
+      phoneNumber: user.phoneNumber,
+    });
+  }
+
   try {
     const { accessToken, refreshTokenPayload } = generateTokens(
       user.id,
@@ -585,6 +606,206 @@ router.post('/reset-password', async (req: any, res: any) => {
   }
 });
 
+// ============================================================================
+// SMS OTP PASSWORD RESET ROUTES
+// Add these two routes to apps/backend/routes/auth.routes.ts
+// Paste them right after the existing POST /reset-password route (~line 580)
+// ============================================================================
+
+// POST /api/auth/forgot-password-sms
+// Initiates password reset via SMS OTP. Rate-limited.
+router.post('/forgot-password-sms', publicLimiter, async (req: any, res: any) => {
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber) {
+    return res.status(400).json({ error: 'Phone number is required.' });
+  }
+
+  // Normalise: strip spaces, ensure it starts with +234 or 0
+  const normalised = phoneNumber.trim();
+
+  try {
+    // Find user by phone number
+    const user = await prisma.user.findFirst({
+      where: { phoneNumber: normalised },
+      select: { id: true, phoneNumber: true, name: true, isActive: true },
+    });
+
+    // Always return 200 — never reveal whether the number exists
+    if (!user || !user.isActive) {
+      return res.json({
+        message: 'If an account exists with that number, an OTP has been sent.',
+      });
+    }
+
+    // Invalidate any existing unused OTPs for this user to prevent accumulation
+    await prisma.otpToken.updateMany({
+      where: {
+        userId: user.id,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      data: { used: true },
+    });
+
+    // Generate a fresh 6-digit OTP
+    const { code, hashed } = generateNumericOtp(AUTH_CONFIG.OTP_LENGTH);
+    const expiresAt = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MS); // 10 minutes
+
+    await prisma.otpToken.create({
+      data: {
+        userId: user.id,
+        phoneNumber: normalised,
+        codeHash: hashed,
+        expiresAt,
+      },
+    });
+
+    // Send OTP via KudiSMS
+    const smsResult = await NotificationService.sendPasswordResetOTPSMS(normalised, code);
+    if (!smsResult.success) {
+      console.error(`[SMS Reset] Failed to send OTP to ${normalised}: ${smsResult.error}`);
+      // Still return 200 — don't expose internal errors. OTP is saved, user can retry.
+    }
+
+    console.log(`[SMS Reset] OTP generated for user ${user.id} — SMS ${smsResult.success ? 'sent' : 'FAILED'}`);
+
+    return res.json({
+      message: 'If an account exists with that number, an OTP has been sent.',
+      userId: user.id, // Needed by the frontend for the verify step
+    });
+  } catch (error: any) {
+    console.error('[SMS Reset] forgot-password-sms error:', error);
+    return res.status(500).json({ error: 'Failed to initiate password reset.' });
+  }
+});
+
+
+// POST /api/auth/reset-password-otp
+// Verifies the OTP and sets a new password.
+router.post('/reset-password-otp', async (req: any, res: any) => {
+  const { userId, otp, newPassword, confirmPassword } = req.body;
+
+  if (!userId || !otp || !newPassword || !confirmPassword) {
+    return res.status(400).json({ error: 'userId, otp, newPassword, and confirmPassword are required.' });
+  }
+
+  if (newPassword.length < AUTH_CONFIG.MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({
+      error: `Password must be at least ${AUTH_CONFIG.MIN_PASSWORD_LENGTH} characters.`,
+    });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ error: 'Passwords do not match.' });
+  }
+
+  try {
+    const codeHash = hashToken(String(otp).trim());
+
+    // Find a valid, unused OTP for this user
+    const otpRecord = await prisma.otpToken.findFirst({
+      where: {
+        userId,
+        codeHash,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (!otpRecord) {
+      // Increment attempts to deter brute force (best-effort — no hard lockout at MVP)
+      console.warn(`[SMS Reset] Invalid or expired OTP attempt for userId ${userId}`);
+      return res.status(400).json({ error: 'Invalid or expired OTP. Please request a new code.' });
+    }
+
+    // Mark OTP as used immediately to prevent replay
+    await prisma.otpToken.update({
+      where: { id: otpRecord.id },
+      data: { used: true },
+    });
+
+    // Hash and save the new password
+    const hashed = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashed,
+        failedLoginAttempts: 0, // Clear any lockout
+        lockedUntil: null,
+      },
+    });
+
+    // Invalidate all refresh tokens so existing sessions must re-authenticate
+    await prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { revoked: true },
+    });
+
+    console.log(`[SMS Reset] Password successfully reset for userId ${userId}`);
+
+    return res.json({ message: 'Password reset successful. Please log in with your new password.' });
+  } catch (error: any) {
+    console.error('[SMS Reset] reset-password-otp error:', error);
+    return res.status(500).json({ error: 'Failed to reset password.' });
+  }
+});
+
+// ============================================================================
+// POST /api/auth/resend-otp
+// Resends a fresh OTP to the user's phone. Used by VerifyPhonePage resend button.
+// Paste this into apps/backend/routes/auth.routes.ts after the /verify-otp route.
+// ============================================================================
+
+router.post('/resend-otp', publicLimiter, async (req: any, res: any) => {
+  const { userId, phoneNumber } = req.body;
+
+  if (!userId || !phoneNumber) {
+    return res.status(400).json({ error: 'userId and phoneNumber are required.' });
+  }
+
+  try {
+    // Confirm the user exists and is not yet phone-verified
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, phoneVerified: true, isActive: true },
+    });
+
+    if (!user) {
+      // Return 200 to avoid user enumeration
+      return res.json({ message: 'If that account exists, a new code has been sent.' });
+    }
+
+    if (user.phoneVerified) {
+      return res.status(400).json({ error: 'This phone number is already verified.' });
+    }
+
+    // Invalidate any existing unused OTPs for this user
+    await prisma.otpToken.updateMany({
+      where: { userId, used: false, expiresAt: { gt: new Date() } },
+      data: { used: true },
+    });
+
+    // Generate and save a fresh OTP
+    const { code, hashed } = generateNumericOtp(AUTH_CONFIG.OTP_LENGTH);
+    const expiresAt = new Date(Date.now() + AUTH_CONFIG.OTP_EXPIRY_MS);
+
+    await prisma.otpToken.create({
+      data: { userId, phoneNumber, codeHash: hashed, expiresAt },
+    });
+
+    const smsResult = await NotificationService.sendOnboardingSMS(phoneNumber, Number(code));
+    if (!smsResult.success) {
+      console.error(`[ResendOTP] SMS failed for userId ${userId}: ${smsResult.error}`);
+    }
+
+    return res.json({ message: 'If that account exists, a new code has been sent.' });
+  } catch (error: any) {
+    console.error('[ResendOTP] Error:', error);
+    return res.status(500).json({ error: 'Failed to resend OTP.' });
+  }
+});
+
 // POST /api/auth/onboard - Public onboarding endpoint (rate-limited)
 router.post('/onboard', publicLimiter, async (req: any, res: any) => {
 
@@ -611,11 +832,11 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
   }
 
   try {
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Check if phone already exists
+    const existingUser = await prisma.user.findUnique({ where: { phoneNumber } });
     if (existingUser) {
       return res.status(409).json({
-        error: 'An account with this email already exists.'
+        error: 'An account with this phone number already exists.'
       });
     }
 
@@ -666,7 +887,7 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
 
     // Verify token was stored correctly
     const createdUser = await prisma.user.findUnique({
-      where: { email },
+      where: { phoneNumber },
       select: { setupToken: true, setupTokenExpires: true }
     });
 
@@ -723,12 +944,17 @@ router.post('/onboard', publicLimiter, async (req: any, res: any) => {
               expiresAt: otpExpires,
             },
           });
+          // Simple converter to turn "09040230325" into "2349040230325"
+          let formattedPhone = phoneNumber.trim();
+          if (formattedPhone.startsWith('0')) {
+            formattedPhone = '234' + formattedPhone.substring(1);
+          }
 
-          console.log(`--DEV ONLY-- Generated OTP for ${phoneNumber}: ${code} (expires at ${otpExpires.toISOString()})`);
+          console.log(`--DEV ONLY-- Generated OTP for ${formattedPhone}: ${code} (expires at ${otpExpires.toISOString()})`);
 
-          const smsResult = await NotificationService.sendOnboardingSMS(phoneNumber, Number(code));
+          const smsResult = await NotificationService.sendOnboardingSMS(formattedPhone, Number(code));
           if (!smsResult.success) {
-            console.warn(`Failed to send onboarding OTP SMS to ${phoneNumber}: ${smsResult.error}`);
+            console.warn(`Failed to send onboarding OTP SMS to ${formattedPhone}: ${smsResult.error}`);
           }
         }
       } catch (err: any) {
@@ -1247,19 +1473,19 @@ router.get('/tenant/suspicious-activity', protect, async (req: any, res: any) =>
 
 // POST /api/auth/setup-account-sms - Setup account using SMS code (for users invited via SMS)
 router.post('/setup-account-sms', async (req: any, res: any) => {
-  const { email, code, password } = req.body;
+  const { phone, code, password } = req.body;
 
-  if (!email || !code || !password) {
-    res.status(400).json({ error: 'Email, code, and password are required.' });
+  if (!phone || !code || !password) {
+    res.status(400).json({ error: 'Phone number, code, and password are required.' });
     return;
   }
 
   try {
     const OTP_ATTEMPT_THRESHOLD = 5;
 
-    // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email }
+    // Find user by phone number
+    const user = await prisma.user.findFirst({
+      where: { phoneNumber: phone.trim() },
     });
 
     if (!user) {
@@ -1363,17 +1589,17 @@ router.post('/setup-account-sms', async (req: any, res: any) => {
 
 // GET /api/auth/setup-code-info - Get setup code info (attempts and expiry) for SMS-based invitations
 router.get('/setup-code-info', async (req: any, res: any) => {
-  const { email } = req.query;
+  const { phone } = req.query;
 
-  if (!email) {
-    res.status(400).json({ error: 'Email is required.' });
+  if (!phone) {
+    res.status(400).json({ error: 'Phone number is required.' });
     return;
   }
 
   try {
     // Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email: email as string }
+    const user = await prisma.user.findFirst({
+      where: { phoneNumber: (phone as string).trim() },
     });
 
     if (!user) {

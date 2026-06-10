@@ -55,7 +55,7 @@ export function OnboardingShell({ currentStep, children }: OnboardingShellProps)
                         fontWeight: 900, color: '#fff', fontSize: 16, letterSpacing: '-0.5px',
                     }}>R</div>
                     <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: 16, letterSpacing: '-0.3px' }}>
-                        RetailStack
+                        Adino POS
                     </span>
                     <span style={{
                         marginLeft: 8, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
