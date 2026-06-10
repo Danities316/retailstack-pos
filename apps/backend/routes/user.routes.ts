@@ -19,12 +19,22 @@ dotenv.config();
 router.use(checkRole([UserRole.OWNER, UserRole.MANAGER, UserRole.SUPER_ADMIN]));
 
 router.post('/invite', async (req: AuthRequest, res: any) => {
-  const { email, name, role, phoneNumber, notificationMethod = 'email' } = req.body;
-  const inviter = req.user!;
+  // const { email, name, role, phoneNumber, notificationMethod = 'email' } = req.body;
+  // const inviter = req.user!;
 
-  // Validate required fields. phoneNumber only required for SMS invites
-  if (!email || !role || (['sms', 'both'].includes(notificationMethod) && !phoneNumber)) {
-    res.status(400).json({ error: 'Email, role, and phone number (for SMS) are required.' });
+  // // Validate required fields. phoneNumber only required for SMS invites
+  // if (!email || !role || (['sms', 'both'].includes(notificationMethod) && !phoneNumber)) {
+  //   res.status(400).json({ error: 'Email, role, and phone number (for SMS) are required.' });
+  //   return;
+  // }
+
+  const { name, role, phoneNumber, notificationMethod = 'sms' } = req.body;
+  const inviter = req.user!;
+  // Generate a placeholder email from phone number — email is not used for notifications
+  const email = req.body.email || `${String(phoneNumber).replace(/\D/g, '')}@placeholder.adinopos.com`;
+
+  if (!name || !role || !phoneNumber) {
+    res.status(400).json({ error: 'Name, role, and phone number are required.' });
     return;
   }
 
@@ -42,18 +52,18 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
 
   try {
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { phoneNumber }
     });
 
     if (existingUser) {
-      if (existingUser.email === email) {
+      if (existingUser.phoneNumber === phoneNumber) {
         // If roles are the same, return error
         if (existingUser.role === role) {
           res.status(409).json({
             error: 'User already exists with this role.',
             existingUser: {
               id: existingUser.id,
-              email: existingUser.email,
+              email: existingUser.phoneNumber,
               role: existingUser.role
             }
           });
@@ -66,7 +76,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
             error: 'User already exists with higher role. Would you like to downgrade the role?',
             existingUser: {
               id: existingUser.id,
-              email: existingUser.email,
+              email: existingUser.phoneNumber,
               currentRole: existingUser.role,
               requestedRole: role
             },
@@ -79,7 +89,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
           error: 'User already exists in another tenant.',
           existingUser: {
             id: existingUser.id,
-            email: existingUser.email,
+            email: existingUser.phoneNumber,
             role: existingUser.role
           }
         });
@@ -137,7 +147,7 @@ router.post('/invite', async (req: AuthRequest, res: any) => {
         data: {
           userId: user.id,
           phoneNumber,
-          codeHash: otpCode,
+          codeHash: hashToken(String(otpCode)),
           expiresAt: otpExpires,
           attempts: 0,
         },

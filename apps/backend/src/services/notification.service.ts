@@ -93,23 +93,50 @@ export class NotificationService {
     if (this.smsProvider === 'kudis') {
       // Real KudiSMS mode: send via API
       try {
-        const response = await axios.post('https://api.kudisms.net/sms/send', {
-          phoneNumber: to,
+        // 1. Prepare parameters using KudiSMS specific payload conventions
+        const payload = {
+          token: process.env.KUDISMS_API_KEY,          // Changed from username/password
+          senderID: process.env.KUDISMS_SENDER_ID || 'SYSTEM', // KudiSMS uses "senderID" instead of "sender"
+          recipients: to,                                       // Recipient phone number (e.g., 2348012345678)
           message: message,
-          username: process.env.KUDISMS_USERNAME,
-          password: process.env.KUDISMS_PASSWORD,
+          route: 2,
+        };
+
+        // 2. Execute POST request to the correct portal endpoint
+        const response = await axios.post('https://my.kudisms.net/api/corporate', payload, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          timeout: 10000 // Best Practice: Always set a timeout for critical 3rd-party services
         });
 
-        if (response.data?.success) {
-          logger.info(`SMS sent successfully to ${to}`);
-          return { success: true, messageId: response.data?.messageId };
+        const responseData = response.data;
+
+        // 3. Robust response evaluation
+        // KudiSMS usually responds with a "success" string status or specific code upon acceptance
+        if (responseData && (responseData.status === 'success' || responseData.success === true || responseData.code === 100)) {
+          logger.info(`SMS sent successfully to ${to}. ID: ${responseData.message_id || responseData.messageId || 'N/A'}`);
+
+          return {
+            success: true,
+            messageId: responseData.message_id || responseData.messageId
+          };
         } else {
-          logger.error(`SMS sending failed: ${response.data?.error || 'Unknown error'}`);
-          return { success: false, error: response.data?.error || 'Failed to send SMS' };
+          // API responded but rejected the text delivery (e.g., "Invalid Sender ID" or "Insufficient Units")
+          const errorMessage = responseData.message || responseData.error || responseData.description || 'API rejection';
+          console.log("CRITICAL KUDISMS REJECTION DATA:", JSON.stringify(responseData));
+          logger.error(`KudiSMS delivery failed for ${to}: ${errorMessage}`);
+
+          return { success: false, error: errorMessage };
         }
+
       } catch (error: any) {
-        logger.error(`KudiSMS API error: ${error.message}`);
-        return { success: false, error: error.message };
+        // Catches network connection drops, bad SSL, or server HTTP error states (4xx/5xx)
+        const errorDetails = error.response?.data?.message || error.message;
+        logger.error(`KudiSMS API communication error: ${errorDetails}`);
+
+        return { success: false, error: `Network/API error: ${errorDetails}` };
       }
     }
 
@@ -417,7 +444,7 @@ export class NotificationService {
     phoneNumber: string,
     code: number
   ): Promise<{ success: boolean; error?: string }> {
-    const message = `Welcome to ADINO POS! Your OTP is ${code}. it expires in 10 mins`;
+    const message = `Your ADINOPOS login verification code is ${code}. Valid for 10 mins.`;
 
     return (await this.sendSMS({
       phoneNumber,

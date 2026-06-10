@@ -67,7 +67,7 @@ export const OnboardingPage = () => {
                 throw new Error(response.error || 'Onboarding failed')
             }
 
-            setSuccess('✓ Tenant created successfully! Check your email to verify your account.')
+            setSuccess('✓ Tenant created successfully! Check your SMS to verify your account.')
             setTimeout(() => navigate('/login'), 2000)
         } catch (err: any) {
             setError(err.message || 'Failed to create tenant. Please try again.')
