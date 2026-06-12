@@ -74,18 +74,23 @@ function generateTokens(userId: string, tenantId: string | null, role: string, n
 
 // POST /api/auth/login
 router.post('/login', publicLimiter, async (req: any, res: any) => {
-  const { email, password } = req.body;
+  const { email, phoneNumber, password } = req.body;
+  const identifier = email?.trim() || phoneNumber?.trim();
 
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'Phone number (or email) and password are required.' });
   }
+
 
   const ip = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('user-agent');
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  console.log('Login attempt for email:', email, '— user found:', !!user);
+  const user = await prisma.user.findFirst({
+    where: phoneNumber
+      ? { phoneNumber: phoneNumber.trim() }
+      : { email: email.trim() },
+  });
+  console.log(`Login attempt for ${phoneNumber ? 'phone' : 'email'}: ${identifier} — user found:`, !!user);
 
   // Log failed login attempts
   if (!user || !(await comparePassword(password, user.password))) {

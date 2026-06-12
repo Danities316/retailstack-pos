@@ -91,6 +91,8 @@ export class NotificationService {
     }
 
     if (this.smsProvider === 'kudis') {
+      logger.info(`[KUDISMS] To: ${to}, Message: ${message}`);
+
       // Real KudiSMS mode: send via API
       try {
         // 1. Prepare parameters using KudiSMS specific payload conventions
